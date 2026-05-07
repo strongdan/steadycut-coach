@@ -68,14 +68,14 @@ substitutions:
   _REPOSITORY: 'app'
   _SERVICE_NAME: 'steadycut-api'
   _RUNTIME_SA_NAME: 'api-runtime'
-  _CLOUDSQL_CONNECTION_NAME: 'PROJECT_ID:REGION:INSTANCE_NAME'
-  _WEB_ORIGIN: 'https://steadycut-coach.web.app'
+  _CLOUDSQL_CONNECTION_NAME: 'steadycut-coach-prod:us-central1:steadycut-db'
+  _WEB_ORIGIN: 'https://steadycut-coach-prod.web.app'
   _VITE_API_URL: 'https://steadycut-api-xyz.a.run.app/api'
   _AI_PROVIDER: 'openai'
   _DEFAULT_TIMEZONE: 'America/Juneau'
-  _SMS_BASE_URL: 'https://steadycut-coach.web.app'
+  _SMS_BASE_URL: 'https://steadycut-coach-prod.web.app'
   _STORAGE_DRIVER: 'gcs'
-  _GCS_BUCKET_NAME: 'steadycut-photos'
+  _GCS_BUCKET_NAME: 'steadycut-photos-steadycut-coach-prod'
 
 options:
   logging: CLOUD_LOGGING
