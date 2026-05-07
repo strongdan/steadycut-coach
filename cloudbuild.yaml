@@ -38,7 +38,17 @@ steps:
       - '--update-env-vars'
       - 'NODE_ENV=production,WEB_ORIGIN=${_WEB_ORIGIN},AI_PROVIDER=${_AI_PROVIDER},DEFAULT_TIMEZONE=${_DEFAULT_TIMEZONE},SMS_BASE_URL=${_SMS_BASE_URL},STORAGE_DRIVER=${_STORAGE_DRIVER},GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}'
       - '--set-secrets'
-      - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest'
+      - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest,MESSAGING_DRIVER=MESSAGING_DRIVER:latest,TWILIO_WHATSAPP_NUMBER=TWILIO_WHATSAPP_NUMBER:latest'
+
+  # Database Schema Sync (Automated npx prisma db push)
+  - name: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/api:${COMMIT_SHA}'
+    id: 'db-sync'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        npx prisma db push --schema apps/api/prisma/schema.prisma --accept-data-loss
+    secretEnv: ['DATABASE_URL']
 
   # Build the web app for Firebase Hosting.
   - name: 'node:22'

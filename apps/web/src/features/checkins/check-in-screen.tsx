@@ -7,6 +7,7 @@ import { api } from "../../lib/api";
 import { authStorage } from "../../lib/auth";
 
 export function CheckInScreen() {
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     waterLiters: 3,
@@ -26,6 +27,24 @@ export function CheckInScreen() {
     notes: "",
   });
 
+  const photoMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("photo", file);
+      formData.append("date", form.date);
+      formData.append("label", "Daily Check-in");
+
+      return api<{ photo: any }>("/progress-photos", {
+        method: "POST",
+        token: authStorage.getToken(),
+        body: formData,
+      });
+    },
+    onSuccess: (data) => {
+      setPhotoUrl(data.photo.fileUrl);
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: () =>
       api<{ coachFeedback: { summary: string } }>("/check-ins", {
@@ -38,6 +57,13 @@ export function CheckInScreen() {
         }),
       }),
   });
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      photoMutation.mutate(file);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -59,6 +85,29 @@ export function CheckInScreen() {
         <ScoreRow label="Energy" value={form.energyScore} onChange={(value) => setForm({ ...form, energyScore: value })} />
         <ScoreRow label="Mood" value={form.moodScore} onChange={(value) => setForm({ ...form, moodScore: value })} />
         <ScoreRow label="Sleep quality" value={form.sleepQualityScore} onChange={(value) => setForm({ ...form, sleepQualityScore: value })} />
+        
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-ink/75">Progress Photo</span>
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-black/10 bg-canvas p-4 text-center">
+            {photoUrl ? (
+              <img src={photoUrl} alt="Progress" className="h-48 w-full rounded-lg object-cover" />
+            ) : (
+              <label className="cursor-pointer space-y-2">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sand text-moss">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                  </svg>
+                </div>
+                <span className="block text-sm font-medium text-moss">
+                  {photoMutation.isPending ? "Uploading..." : "Tap to add photo"}
+                </span>
+                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoChange} disabled={photoMutation.isPending} />
+              </label>
+            )}
+          </div>
+        </div>
+
         <label className="flex items-center justify-between rounded-2xl bg-canvas px-4 py-3 text-sm">
           <span>Ate after cutoff</span>
           <input type="checkbox" checked={form.ateAfterCutoff} onChange={(e) => setForm({ ...form, ateAfterCutoff: e.target.checked })} />

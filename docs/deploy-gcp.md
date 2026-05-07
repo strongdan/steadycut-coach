@@ -166,3 +166,34 @@ gcloud tasks queues create reminder-delivery --location=us-central1
   - Cloud Run scales to zero (cheap for low traffic).
   - Cloud SQL is the primary fixed cost (approx. $10-30/mo for small instances).
   - Use `min-instances: 0` in Cloud Run to save money during development.
+
+---
+
+## 9. Staging vs Production
+
+It is highly recommended to maintain a separate GCP project for staging.
+
+### Create Staging Project
+1. Create a project named `steadycut-coach-staging`.
+2. Link billing.
+3. Run the automated setup:
+   ```bash
+   ./setup-gcp.sh steadycut-coach-staging
+   ```
+
+### Staging CI/CD
+1. Create a new trigger in Cloud Build for the `develop` branch.
+2. Update the substitution variables to point to the `staging` resources.
+
+---
+
+## 10. Summary Checklist
+- [x] APIs enabled.
+- [x] Artifact Registry created.
+- [x] Service Account `api-runtime` provisioned.
+- [x] Cloud SQL instance created.
+- [x] Cloud Storage bucket created.
+- [x] Cloud Tasks queue created.
+- [x] Secret Manager populated.
+- [x] Cloud Build trigger connected.
+- [x] Cloud Scheduler heart-beat created.
