@@ -2,6 +2,8 @@ steps:
   # Build and push the API container image to Artifact Registry.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-api'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       - 'build'
       - '-t'
