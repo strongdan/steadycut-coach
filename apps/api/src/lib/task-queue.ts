@@ -12,6 +12,7 @@ export type ReminderDeliveryTaskPayload = {
   toNumber: string;
   dedupeKey: string;
   body: string;
+  channel: "sms" | "whatsapp";
 };
 
 export type EnqueueResult = {

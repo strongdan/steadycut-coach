@@ -53,6 +53,7 @@ router.post("/reminders/orchestrate", async (req, res, next) => {
           toNumber: reminder.user.phoneNumber as string,
           dedupeKey,
           body: renderReminderTemplate(reminder.messageTemplate, now),
+          channel: reminder.channel as "sms" | "whatsapp",
         };
       });
 
@@ -76,6 +77,7 @@ router.post("/reminders/orchestrate", async (req, res, next) => {
             toNumber: payload.toNumber,
             body: payload.body,
             dedupeKey: payload.dedupeKey,
+            channel: payload.channel,
           }),
         ),
       );
@@ -93,13 +95,14 @@ router.post("/reminders/orchestrate", async (req, res, next) => {
   }
 });
 
-router.post("/reminders/deliver", async (req, res, next) => {
+router.post("/reminders/deliver", requireInternalJobAuth, async (req, res, next) => {
   try {
     const reminderId = String(req.body?.reminderId ?? "");
     const userId = String(req.body?.userId ?? "");
     const toNumber = String(req.body?.toNumber ?? "");
     const body = String(req.body?.body ?? "");
     const dedupeKey = String(req.body?.dedupeKey ?? "");
+    const channel = (req.body?.channel as "sms" | "whatsapp") || "sms";
 
     if (!reminderId || !userId || !toNumber || !body || !dedupeKey) {
       return res.status(400).json({
@@ -107,19 +110,13 @@ router.post("/reminders/deliver", async (req, res, next) => {
       });
     }
 
-    const result =
-      env.TASK_QUEUE_DRIVER === "inline"
-        ? {
-            skipped: false,
-            reason: "inline-already-processed",
-            smsMessage: null,
-          }
-        : await sendSmsMessage({
-            userId,
-            toNumber,
-            body,
-            dedupeKey,
-          });
+    const result = await sendSmsMessage({
+      userId,
+      toNumber,
+      body,
+      dedupeKey,
+      channel,
+    });
 
     res.status(result.skipped ? 200 : 201).json({
       reminderId,
