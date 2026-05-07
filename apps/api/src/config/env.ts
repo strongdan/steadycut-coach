@@ -16,6 +16,7 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
+  TWILIO_WHATSAPP_NUMBER: z.string().optional(),
   SMS_BASE_URL: z.string().url().default("http://localhost:5173"),
   DEFAULT_TIMEZONE: z.string().default("America/Juneau"),
   STORAGE_DRIVER: z.enum(["local", "gcs"]).default("local"),

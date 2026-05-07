@@ -12,11 +12,13 @@ type SendSmsInput = {
   toNumber: string;
   body: string;
   dedupeKey: string;
+  channel?: "sms" | "whatsapp";
 };
 
 export async function sendSmsMessage(input: SendSmsInput) {
+  const channel = input.channel ?? "sms";
   // Use the dedupeKey as the basis for our provider ID to ensure idempotency
-  const providerMessageId = `sc-${input.dedupeKey}`;
+  const providerMessageId = `sc-${channel}-${input.dedupeKey}`;
 
   const existing = await prisma.smsMessage.findFirst({
     where: {
@@ -56,17 +58,23 @@ export async function sendSmsMessage(input: SendSmsInput) {
   }
 
   try {
+    const isWhatsApp = channel === "whatsapp";
+    const from = isWhatsApp
+      ? `whatsapp:${env.TWILIO_WHATSAPP_NUMBER || env.TWILIO_PHONE_NUMBER}`
+      : env.TWILIO_PHONE_NUMBER;
+    const to = isWhatsApp ? `whatsapp:${input.toNumber}` : input.toNumber;
+
     const message = await twilioClient.messages.create({
       body: input.body,
-      from: env.TWILIO_PHONE_NUMBER,
-      to: input.toNumber,
+      from,
+      to,
     });
 
     const smsMessage = await prisma.smsMessage.create({
       data: {
         userId: input.userId,
         direction: "outbound",
-        fromNumber: env.TWILIO_PHONE_NUMBER ?? "unknown",
+        fromNumber: from ?? "unknown",
         toNumber: input.toNumber,
         body: input.body,
         providerMessageId: message.sid || providerMessageId,

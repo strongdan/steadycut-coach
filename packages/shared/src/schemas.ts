@@ -83,6 +83,6 @@ export const reminderPreferenceSchema = z.object({
   enabled: z.boolean(),
   timeOfDay: z.string(),
   daysOfWeekJson: z.array(z.number().int().min(0).max(6)).default([]),
-  channel: z.enum(["sms", "push", "email"]).default("sms"),
+  channel: z.enum(["sms", "whatsapp", "push", "email"]).default("sms"),
   messageTemplate: z.string().min(1),
 });
