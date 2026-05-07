@@ -29,6 +29,7 @@ app.use(
     limit: 200,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   }),
 );
 app.use(express.json({ limit: "2mb" }));

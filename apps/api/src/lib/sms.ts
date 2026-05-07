@@ -39,9 +39,15 @@ class MockProvider implements MessagingProvider {
 
     logger.info({ userId: input.userId, dedupeKey: input.dedupeKey }, `[MOCK ${channel.toUpperCase()}] to ${input.toNumber}: ${input.body}`);
 
+    // Ensure the user exists before trying to link the record
+    const userExists = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true },
+    });
+
     const smsMessage = await prisma.smsMessage.create({
       data: {
-        userId: input.userId,
+        userId: userExists ? input.userId : null,
         direction: "outbound",
         fromNumber: "MOCK",
         toNumber: input.toNumber,
@@ -85,9 +91,15 @@ class TwilioProvider implements MessagingProvider {
 
     const message = await client.messages.create({ body: input.body, from, to });
 
+    // Ensure the user exists before trying to link the record
+    const userExists = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true },
+    });
+
     const smsMessage = await prisma.smsMessage.create({
       data: {
-        userId: input.userId,
+        userId: userExists ? input.userId : null,
         direction: "outbound",
         fromNumber: from ?? "unknown",
         toNumber: input.toNumber,
@@ -143,9 +155,15 @@ class MetaProvider implements MessagingProvider {
         throw new Error(`Meta API Error: ${result.error?.message || "Unknown"}`);
     }
 
+    // Ensure the user exists before trying to link the record
+    const userExists = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true },
+    });
+
     const smsMessage = await prisma.smsMessage.create({
       data: {
-        userId: input.userId,
+        userId: userExists ? input.userId : null,
         direction: "outbound",
         fromNumber: env.META_PHONE_NUMBER_ID,
         toNumber: input.toNumber,
