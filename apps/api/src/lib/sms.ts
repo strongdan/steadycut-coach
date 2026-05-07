@@ -58,10 +58,6 @@ class MockProvider implements MessagingProvider {
  * TWILIO PROVIDER (Backup/Production)
  */
 class TwilioProvider implements MessagingProvider {
-  private client = env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN
-    ? twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
-    : null;
-
   async send(input: SendMessageInput): Promise<MessageResult> {
     const channel = input.channel ?? "sms";
     const providerMessageId = `tw-${channel}-${input.dedupeKey}`;
@@ -71,7 +67,15 @@ class TwilioProvider implements MessagingProvider {
     });
     if (existing) return { skipped: true, reason: "duplicate", smsMessage: existing };
 
-    if (!this.client) throw new Error("Twilio credentials missing but Twilio driver selected.");
+    if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) {
+      throw new Error("Twilio credentials missing but Twilio driver selected.");
+    }
+
+    if (!env.TWILIO_ACCOUNT_SID.startsWith("AC")) {
+      throw new Error("Invalid TWILIO_ACCOUNT_SID. It must start with 'AC'.");
+    }
+
+    const client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
     const isWhatsApp = channel === "whatsapp";
     const from = isWhatsApp
@@ -79,7 +83,7 @@ class TwilioProvider implements MessagingProvider {
       : env.TWILIO_PHONE_NUMBER;
     const to = isWhatsApp ? `whatsapp:${input.toNumber}` : input.toNumber;
 
-    const message = await this.client.messages.create({ body: input.body, from, to });
+    const message = await client.messages.create({ body: input.body, from, to });
 
     const smsMessage = await prisma.smsMessage.create({
       data: {
