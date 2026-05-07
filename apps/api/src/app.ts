@@ -14,6 +14,8 @@ import { apiRouter } from "./routes/index.js";
 
 export const app = express();
 
+app.set("trust proxy", true);
+
 app.use(
   cors({
     origin: env.WEB_ORIGIN,

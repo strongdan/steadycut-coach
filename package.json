@@ -13,5 +13,12 @@
     "db:migrate": "pnpm --filter @steadycut/api prisma:migrate",
     "db:seed": "pnpm --filter @steadycut/api prisma:seed",
     "db:studio": "pnpm --filter @steadycut/api prisma:studio"
+  },
+  "dependencies": {
+    "pnpm": "^10.33.4",
+    "twilio": "^6.0.2"
+  },
+  "devDependencies": {
+    "@types/twilio": "^3.19.2"
   }
 }
