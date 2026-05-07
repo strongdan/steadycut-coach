@@ -50,7 +50,7 @@ router.post("/reminders/orchestrate", async (req, res, next) => {
           reminderId: reminder.id,
           userId: reminder.userId,
           type: reminder.type,
-          toNumber: reminder.user.phoneNumber,
+          toNumber: reminder.user.phoneNumber as string,
           dedupeKey,
           body: renderReminderTemplate(reminder.messageTemplate, now),
         };

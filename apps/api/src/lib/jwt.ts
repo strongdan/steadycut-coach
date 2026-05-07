@@ -9,7 +9,7 @@ type JwtPayload = {
 
 export const signToken = (payload: JwtPayload) =>
   jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN,
+    expiresIn: env.JWT_EXPIRES_IN as any,
   });
 
 export const verifyToken = (token: string) => jwt.verify(token, env.JWT_SECRET) as JwtPayload;

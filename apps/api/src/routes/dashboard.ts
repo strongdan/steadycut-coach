@@ -10,7 +10,7 @@ router.use(requireAuth);
 
 router.get("/today", async (req, res, next) => {
   try {
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

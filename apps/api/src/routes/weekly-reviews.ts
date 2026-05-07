@@ -12,7 +12,7 @@ router.use(requireAuth);
 
 router.get("/", async (req, res, next) => {
   try {
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const reviews = await prisma.weeklyReview.findMany({
       where: { userId: id },
       orderBy: { weekStartDate: "desc" },
@@ -27,7 +27,7 @@ router.get("/", async (req, res, next) => {
 
 router.post("/generate", async (req, res, next) => {
   try {
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const requestedStart = typeof req.body?.weekStartDate === "string" ? new Date(req.body.weekStartDate) : new Date();
     const weekStartDate = startOfWeek(requestedStart);
     const weekEndDate = new Date(weekStartDate.getTime() + 6 * MS_PER_DAY);

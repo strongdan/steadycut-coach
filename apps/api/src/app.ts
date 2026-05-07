@@ -3,7 +3,7 @@ import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import pinoHttp from "pino-http";
+import { pinoHttp } from "pino-http";
 import path from "node:path";
 
 import { env } from "./config/env.js";

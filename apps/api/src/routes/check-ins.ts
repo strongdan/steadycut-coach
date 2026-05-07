@@ -13,7 +13,7 @@ router.use(requireAuth);
 
 router.get("/", async (req, res, next) => {
   try {
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const checkIns = await prisma.dailyCheckIn.findMany({
       where: { userId: id },
       orderBy: { date: "desc" },
@@ -28,7 +28,7 @@ router.get("/", async (req, res, next) => {
 
 router.get("/:date", async (req, res, next) => {
   try {
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const date = new Date(req.params.date);
     const checkIn = await prisma.dailyCheckIn.findFirst({
       where: { userId: id, date },
@@ -43,7 +43,7 @@ router.get("/:date", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const input = dailyCheckInSchema.parse(req.body);
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const plan = await prisma.plan.findFirst({
       where: { userId: id, isActive: true, deletedAt: null },
       orderBy: { createdAt: "desc" },
@@ -81,7 +81,7 @@ router.post("/", async (req, res, next) => {
 router.patch("/:id", async (req, res, next) => {
   try {
     const input = dailyCheckInSchema.partial().parse(req.body);
-    const { id: userId } = (req as AuthedRequest).user;
+    const { id: userId } = (req as any).user;
     const existing = await prisma.dailyCheckIn.findFirst({
       where: { id: req.params.id, userId },
     });

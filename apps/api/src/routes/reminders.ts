@@ -22,7 +22,7 @@ router.use(requireAuth);
 
 router.get("/", async (req, res, next) => {
   try {
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
     const reminders = await prisma.reminderPreference.findMany({
       where: { userId: id, deletedAt: null },
       orderBy: [{ type: "asc" }, { createdAt: "asc" }],
@@ -37,7 +37,7 @@ router.get("/", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const input = reminderPreferenceSchema.parse(req.body);
-    const { id } = (req as AuthedRequest).user;
+    const { id } = (req as any).user;
 
     const reminder = await prisma.reminderPreference.create({
       data: {
@@ -57,7 +57,7 @@ router.post("/", async (req, res, next) => {
 router.patch("/:id", async (req, res, next) => {
   try {
     const input = reminderPreferenceSchema.partial().parse(req.body);
-    const { id: userId } = (req as AuthedRequest).user;
+    const { id: userId } = (req as any).user;
 
     const existing = await prisma.reminderPreference.findFirst({
       where: { id: req.params.id, userId, deletedAt: null },
