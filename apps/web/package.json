@@ -17,7 +17,8 @@
     "clsx": "^2.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.0"
+    "react-router-dom": "^7.6.0",
+    "workbox-window": "^7.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.3",
