@@ -42,5 +42,7 @@ COPY --from=build /usr/src/app/packages/shared ./packages/shared
 COPY --from=build /usr/src/app/apps/api ./apps/api
 
 WORKDIR /usr/src/app/apps/api
+RUN pnpm prisma generate
+
 EXPOSE 8080
 CMD [ "node", "dist/index.js" ]
