@@ -15,7 +15,9 @@
     "db:studio": "pnpm --filter @steadycut/api prisma:studio"
   },
   "dependencies": {
+    "google-recaptcha": "^1.1.0",
     "pnpm": "^10.33.4",
+    "react-google-recaptcha-v3": "^1.11.0",
     "twilio": "^6.0.2"
   },
   "devDependencies": {

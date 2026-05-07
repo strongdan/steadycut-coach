@@ -25,6 +25,7 @@ const envSchema = z.object({
   STORAGE_DRIVER: z.enum(["local", "gcs"]).default("local"),
   UPLOADS_DIR: z.string().default("apps/api/uploads"),
   GCS_BUCKET_NAME: z.string().optional(),
+  RECAPTCHA_SECRET_KEY: z.string().optional(),
   INTERNAL_JOB_TOKEN: z.string().min(12),
   TASK_QUEUE_DRIVER: z.enum(["inline", "gcp"]).default("inline"),
   TASK_QUEUE_LOCATION: z.string().default("us-central1"),

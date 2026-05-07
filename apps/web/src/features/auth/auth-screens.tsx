@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -9,6 +10,7 @@ import { authStorage } from "../../lib/auth";
 
 type AuthResponse = {
   token: string;
+  requiresVerification?: boolean;
 };
 
 const baseFields = {
@@ -50,33 +52,76 @@ export function LandingScreen() {
 
 export function RegisterScreen() {
   const navigate = useNavigate();
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const [form, setForm] = useState(baseFields);
+  const [showOtp, setShowOtp] = useState(false);
+  const [otp, setOtp] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () =>
-      api<AuthResponse & { user: { name: string } }>("/auth/register", {
+    mutationFn: async () => {
+      let recaptchaToken = "";
+      if (executeRecaptcha) {
+        recaptchaToken = await executeRecaptcha("register");
+      }
+
+      return api<AuthResponse & { user: { name: string } }>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           ...form,
-          timezone: "America/Juneau",
+          recaptchaToken,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           units: "imperial",
         }),
-      }),
-    onSuccess: ({ token }) => {
+      });
+    },
+    onSuccess: ({ token, requiresVerification }) => {
       authStorage.setToken(token);
+      if (requiresVerification) {
+        setShowOtp(true);
+      } else {
+        navigate("/app/plan");
+      }
+    },
+  });
+
+  const otpMutation = useMutation({
+    mutationFn: () =>
+      api("/auth/verify-otp", {
+        method: "POST",
+        token: authStorage.getToken(),
+        body: JSON.stringify({ otp }),
+      }),
+    onSuccess: () => {
       navigate("/app/plan");
     },
   });
+
+  if (showOtp) {
+    return (
+      <AuthLayout title="Verify your number" subtitle="We sent a 6-digit code to your phone to verify your account.">
+        <input className={inputClass} placeholder="6-digit code" value={otp} onChange={(e) => setOtp(e.target.value)} maxLength={6} />
+        <Button onClick={() => otpMutation.mutate()} disabled={otpMutation.isPending}>
+          {otpMutation.isPending ? "Verifying..." : "Verify & Continue"}
+        </Button>
+        {otpMutation.error ? <p className="text-sm text-red-600">{otpMutation.error.message}</p> : null}
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout title="Create your coaching account" subtitle="Keep setup simple. You can refine targets inside the plan wizard.">
       <input className={inputClass} placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <input className={inputClass} placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
       <input className={inputClass} placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-      <input className={inputClass} placeholder="Phone number for SMS later" value={form.phoneNumber} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} />
+      <input className={inputClass} placeholder="Phone number (+1...)" value={form.phoneNumber} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} />
       <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
         {mutation.isPending ? "Creating..." : "Create account"}
       </Button>
+      <div className="text-center">
+        <button onClick={() => navigate("/login")} className="text-xs font-medium text-moss hover:underline">
+          Already have an account? Log in
+        </button>
+      </div>
       {mutation.error ? <p className="text-sm text-red-600">{mutation.error.message}</p> : null}
     </AuthLayout>
   );
@@ -108,6 +153,11 @@ export function LoginScreen() {
       <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
         {mutation.isPending ? "Logging in..." : "Log in"}
       </Button>
+      <div className="text-center">
+        <button onClick={() => navigate("/register")} className="text-xs font-medium text-moss hover:underline">
+          New here? Create an account
+        </button>
+      </div>
       {mutation.error ? <p className="text-sm text-red-600">{mutation.error.message}</p> : null}
     </AuthLayout>
   );
