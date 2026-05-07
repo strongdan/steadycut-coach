@@ -1,0 +1,23 @@
+import { Router } from "express";
+
+import { authRouter } from "./auth.js";
+import { checkInsRouter } from "./check-ins.js";
+import { dashboardRouter } from "./dashboard.js";
+import { planRouter } from "./plan.js";
+import { remindersRouter } from "./reminders.js";
+import { weeklyReviewsRouter } from "./weekly-reviews.js";
+
+const router = Router();
+
+router.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+router.use("/auth", authRouter);
+router.use("/plan", planRouter);
+router.use("/dashboard", dashboardRouter);
+router.use("/check-ins", checkInsRouter);
+router.use("/weekly-reviews", weeklyReviewsRouter);
+router.use("/reminders", remindersRouter);
+
+export const apiRouter = router;

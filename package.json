@@ -1,0 +1,17 @@
+{
+  "name": "steadycut-coach",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @steadycut/api prisma:generate",
+    "db:migrate": "pnpm --filter @steadycut/api prisma:migrate",
+    "db:seed": "pnpm --filter @steadycut/api prisma:seed",
+    "db:studio": "pnpm --filter @steadycut/api prisma:studio"
+  }
+}

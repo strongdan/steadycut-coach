@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Units {
+  imperial
+  metric
+}
+
+enum PlanStrictness {
+  relaxed
+  standard
+  aggressive
+}
+
+enum CoachingTone {
+  direct
+  supportive
+  neutral
+}
+
+enum ProteinStatus {
+  yes
+  no
+  partial
+}
+
+enum TrainingStatus {
+  none
+  light
+  full
+}
+
+enum CardioType {
+  none
+  walk
+  run
+  swim
+  bike
+  hockey
+  other
+}
+
+enum ReminderType {
+  morning
+  meal
+  cutoff
+  weekly
+  missed_check_in
+  motivation
+}
+
+enum ReminderChannel {
+  sms
+  push
+  email
+}
+
+enum ConversationChannel {
+  app
+  sms
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+enum RecommendationStatus {
+  green
+  yellow
+  red
+}
+
+enum SmsDirection {
+  inbound
+  outbound
+}
+
+enum MealType {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
+enum TrainingType {
+  strength
+  cardio
+  walk
+  run
+  swim
+  hockey
+  mobility
+  rest
+}
+
+model User {
+  id                      String                 @id @default(cuid())
+  email                   String                 @unique
+  passwordHash            String
+  name                    String
+  phoneNumber             String?
+  timezone                String                 @default("America/Juneau")
+  height                  String?
+  startingWeight          Float?
+  goalWeight              Float?
+  targetStartDate         DateTime?
+  targetEndDate           DateTime?
+  coachingTone            CoachingTone           @default(direct)
+  planStrictness          PlanStrictness         @default(standard)
+  units                   Units                  @default(imperial)
+  smsConsent              Boolean                @default(false)
+  smsOptedOutAt           DateTime?
+  preferredReminderTimes  Json?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  deletedAt               DateTime?
+  plans                   Plan[]
+  dailyRules              DailyRule[]
+  checkIns                DailyCheckIn[]
+  checklistItems          ChecklistItem[]
+  mealTemplates           MealTemplate[]
+  mealLogs                MealLog[]
+  trainingSessions        TrainingSession[]
+  reminderPreferences     ReminderPreference[]
+  smsMessages             SmsMessage[]
+  coachConversations      CoachConversation[]
+  weeklyReviews           WeeklyReview[]
+  progressPhotos          ProgressPhoto[]
+  metricTargets           MetricTarget[]
+}
+
+model Plan {
+  id                       String            @id @default(cuid())
+  userId                   String
+  user                     User              @relation(fields: [userId], references: [id])
+  name                     String
+  startDate                DateTime
+  endDate                  DateTime
+  startingWeight           Float
+  goalWeight               Float?
+  proteinTargetGrams       Int
+  fiberTargetGrams         Int
+  waterTargetLiters        Float
+  stepTarget               Int
+  strengthSessionsPerWeek  Int
+  cardioSessionsPerWeek    Int
+  eatingCutoffTime         String
+  alcoholGoal              String
+  planStrictness           PlanStrictness    @default(standard)
+  preferredMealTemplates   Json?
+  preferredTrainingTypes   Json?
+  reminderPreferences      Json?
+  isActive                 Boolean           @default(true)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  deletedAt                DateTime?
+  checkIns                 DailyCheckIn[]
+  trainingSessions         TrainingSession[]
+  weeklyReviews            WeeklyReview[]
+}
+
+model DailyRule {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  title      String
+  description String?
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+}
+
+model DailyCheckIn {
+  id                String         @id @default(cuid())
+  userId            String
+  planId            String?
+  user              User           @relation(fields: [userId], references: [id])
+  plan              Plan?          @relation(fields: [planId], references: [id])
+  date              DateTime
+  weight            Float?
+  steps             Int?
+  waterLiters       Float
+  proteinStatus     ProteinStatus
+  fiberStatus       ProteinStatus
+  ateAfterCutoff    Boolean
+  alcoholDrinks     Int            @default(0)
+  strengthStatus    TrainingStatus
+  cardioType        CardioType
+  cardioMinutes     Int            @default(0)
+  hungerScore       Int
+  energyScore       Int
+  moodScore         Int
+  sleepQualityScore Int
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([userId, date])
+}
+
+model ChecklistItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  date        DateTime
+  key         String
+  label       String
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MealTemplate {
+  id               String    @id @default(cuid())
+  userId           String?
+  user             User?     @relation(fields: [userId], references: [id])
+  name             String
+  mealType         MealType
+  proteinEstimate  Int
+  fiberEstimate    Int
+  caloriesEstimate Int?
+  ingredientsJson  Json
+  prepInstructions String
+  isDefault        Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  mealLogs         MealLog[]
+}
+
+model MealLog {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  mealTemplateId String?
+  mealTemplate   MealTemplate? @relation(fields: [mealTemplateId], references: [id])
+  date           DateTime
+  mealType       MealType
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model TrainingSession {
+  id              String       @id @default(cuid())
+  userId          String
+  planId          String?
+  user            User         @relation(fields: [userId], references: [id])
+  plan            Plan?        @relation(fields: [planId], references: [id])
+  date            DateTime
+  type            TrainingType
+  durationMinutes Int
+  intensity       String?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+}
+
+model ReminderPreference {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  type           ReminderType
+  enabled        Boolean         @default(true)
+  timeOfDay      String
+  daysOfWeekJson Json?
+  channel        ReminderChannel @default(sms)
+  messageTemplate String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+}
+
+model SmsMessage {
+  id                String       @id @default(cuid())
+  userId            String?
+  user              User?        @relation(fields: [userId], references: [id])
+  direction         SmsDirection
+  fromNumber        String
+  toNumber          String
+  body              String
+  providerMessageId String?
+  createdAt         DateTime     @default(now())
+}
+
+model CoachConversation {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  channel   ConversationChannel
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  messages  CoachMessage[]
+}
+
+model CoachMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   CoachConversation @relation(fields: [conversationId], references: [id])
+  role           MessageRole
+  content        String
+  metadataJson   Json?
+  createdAt      DateTime          @default(now())
+}
+
+model WeeklyReview {
+  id                 String               @id @default(cuid())
+  userId             String
+  planId             String?
+  user               User                 @relation(fields: [userId], references: [id])
+  plan               Plan?                @relation(fields: [planId], references: [id])
+  weekStartDate      DateTime
+  weekEndDate        DateTime
+  avgWeight          Float?
+  adherenceScore     Float?
+  strengthSessions   Int                  @default(0)
+  cardioSessions     Int                  @default(0)
+  walkingDays        Int                  @default(0)
+  alcoholTotal       Int                  @default(0)
+  cutoffAdherencePct Float?
+  coachSummary       String?
+  recommendationStatus RecommendationStatus @default(green)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+}
+
+model ProgressPhoto {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  label     String
+  fileUrl   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MetricTarget {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  key        String
+  label      String
+  value      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+}
