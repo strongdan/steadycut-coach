@@ -43,6 +43,8 @@ README.md
 - Daily check-in endpoints with mock coaching feedback
 - Weekly review generation with green/yellow/red classification
 - Reminder preference CRUD scaffold for SMS/push/email timing and templates
+- Internal reminder job endpoints shaped for Cloud Scheduler and Cloud Tasks
+- Storage abstraction with local and future GCS-oriented provider support
 - Seed script for default meal templates
 - Mobile-first PWA shell
 - Public landing page
@@ -108,6 +110,16 @@ Or run both workspace dev servers together:
 pnpm dev
 ```
 
+## Deployment
+
+This project is designed to be deployed to **Google Cloud Platform**.
+
+Refer to the [GCP Deployment Runbook](docs/deploy-gcp.md) for detailed instructions on:
+- Setting up Cloud Run and Cloud SQL
+- Configuring CI/CD with Cloud Build
+- Deploying the frontend to Firebase Hosting
+- Secret management and reminder job orchestration
+
 Run API tests:
 
 ```bash
@@ -121,6 +133,7 @@ pnpm --filter @steadycut/api test
 - The current coaching response is a mock heuristic response. It is intentionally short, direct, and non-shaming.
 - Weekly reviews are generated from recent check-ins and basic adherence/recovery heuristics.
 - Reminder preferences are persisted, but there is no job scheduler or Twilio delivery worker yet.
+- Internal reminder routes exist for orchestration and delivery, protected by an internal bearer token.
 
 ## Product notes
 
@@ -128,6 +141,7 @@ pnpm --filter @steadycut/api test
 - The check-in form supports optional weight and steps, simple adherence signals, and recovery markers.
 - The seed templates match the plan assumptions in the prompt.
 - Reminder logic, Twilio, scheduled jobs, in-app chat, weekly reviews, and photo uploads are intentionally deferred to later phases, but the Prisma schema leaves room for them.
+- The reminder orchestration endpoint currently returns queued payloads for a scheduler/task layer and uses a placeholder SMS sender with dedupe keys recorded in `SmsMessage`.
 - Dinner suggestions should be sent later in the afternoon via SMS, and occasional breakfast/lunch ideas later in the evening. That scheduling behavior is not implemented yet, but the reminder model is structured for it.
 
 ## Recommended next tasks
