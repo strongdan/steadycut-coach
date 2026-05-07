@@ -76,6 +76,3 @@ substitutions:
   _SMS_BASE_URL: 'https://steadycut-coach-prod.web.app'
   _STORAGE_DRIVER: 'gcs'
   _GCS_BUCKET_NAME: 'steadycut-photos-steadycut-coach-prod'
-
-options:
-  logging: CLOUD_LOGGING
