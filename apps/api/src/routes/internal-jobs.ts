@@ -36,9 +36,9 @@ router.post("/reminders/orchestrate", async (req, res, next) => {
     });
 
     const duePayloads: ReminderDeliveryTaskPayload[] = reminders
-      .filter((reminder) => reminder.user.phoneNumber)
-      .filter((reminder) => isReminderDue(reminder.timeOfDay, now, minuteWindow))
-      .map((reminder) => {
+      .filter((reminder: any) => reminder.user.phoneNumber)
+      .filter((reminder: any) => isReminderDue(reminder.timeOfDay, now, minuteWindow))
+      .map((reminder: any) => {
         const dedupeKey = buildDedupeKey({
           userId: reminder.userId,
           reminderId: reminder.id,

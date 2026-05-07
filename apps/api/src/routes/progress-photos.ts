@@ -28,7 +28,7 @@ router.get("/", async (req, res, next) => {
 
     // Provide signed URLs if needed by the provider
     const photosWithUrls = await Promise.all(
-      photos.map(async (photo) => ({
+      photos.map(async (photo: any) => ({
         ...photo,
         fileUrl: storageProvider.getSignedReadUrl
           ? await storageProvider.getSignedReadUrl(photo.fileUrl)
