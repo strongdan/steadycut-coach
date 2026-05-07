@@ -3,6 +3,7 @@ import { Router } from "express";
 import { authRouter } from "./auth.js";
 import { checkInsRouter } from "./check-ins.js";
 import { dashboardRouter } from "./dashboard.js";
+import { internalJobsRouter } from "./internal-jobs.js";
 import { planRouter } from "./plan.js";
 import { remindersRouter } from "./reminders.js";
 import { weeklyReviewsRouter } from "./weekly-reviews.js";
@@ -19,5 +20,6 @@ router.use("/dashboard", dashboardRouter);
 router.use("/check-ins", checkInsRouter);
 router.use("/weekly-reviews", weeklyReviewsRouter);
 router.use("/reminders", remindersRouter);
+router.use("/internal/jobs", internalJobsRouter);
 
 export const apiRouter = router;

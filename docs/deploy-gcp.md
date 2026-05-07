@@ -14,6 +14,15 @@ This document outlines the production-ready deployment strategy for the steadycu
 
 ---
 
+## 1.1 Current Repo Assumptions
+
+- `apps/web` is a static Vite build and should deploy independently from the API.
+- `apps/api` is a standalone Express container for Cloud Run.
+- The repo does **not** currently commit a `pnpm-lock.yaml`. The deployment artifacts here therefore use `--no-frozen-lockfile`. Before the first real production launch, commit a lockfile and switch build steps back to `--frozen-lockfile`.
+- The API currently contains internal reminder job endpoints protected by `INTERNAL_JOB_TOKEN`. That is a first internal seam, not the final OIDC-based production setup.
+
+---
+
 ## 2. Infrastructure Setup
 
 ### Enable APIs
@@ -27,7 +36,9 @@ gcloud services enable \
   firebase.googleapis.com \
   cloudscheduler.googleapis.com \
   cloudtasks.googleapis.com \
-  storage.googleapis.com
+  storage.googleapis.com \
+  logging.googleapis.com \
+  monitoring.googleapis.com
 ```
 
 ### Artifact Registry
@@ -40,11 +51,11 @@ gcloud artifacts repositories create app \
 ```
 
 ### Cloud SQL (PostgreSQL)
-Create a PostgreSQL instance (start with `db-f1-micro` for staging or `db-custom-1-3840` for prod):
+Create a PostgreSQL instance. Choose the smallest currently-supported tier that fits your environment rather than relying on historical machine names from old examples:
 ```bash
 gcloud sql instances create steadycut-db \
     --database-version=POSTGRES_15 \
-    --tier=db-f1-micro \
+    --tier=db-custom-1-3840 \
     --region=us-central1
 ```
 Create the database and user:
@@ -57,6 +68,9 @@ gcloud sql users create api_user --instance=steadycut-db --password=REPLACE_ME
 Store sensitive values. At a minimum:
 - `DATABASE_URL`: `postgresql://api_user:PASSWORD@localhost/steadycut_prod?host=/cloudsql/PROJECT_ID:REGION:INSTANCE_NAME`
 - `JWT_SECRET`: A long random string.
+- `INTERNAL_JOB_TOKEN`: bearer token for the current internal job routes.
+- `TASK_QUEUE_DRIVER`, `TASK_QUEUE_LOCATION`, `TASK_QUEUE_NAME`, `TASK_QUEUE_TARGET_URL`: queue configuration for reminder fanout.
+- `OPENAI_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` as features come online.
 
 ---
 
@@ -64,8 +78,11 @@ Store sensitive values. At a minimum:
 
 | Name | ID | Roles |
 | :--- | :--- | :--- |
-| **Cloud Build SA** | `PROJECT_NUMBER@cloudbuild.gserviceaccount.com` | `roles/run.admin`, `roles/firebase.admin`, `roles/iam.serviceAccountUser`, `roles/artifactregistry.writer` |
+| **Cloud Build SA** | `PROJECT_NUMBER@cloudbuild.gserviceaccount.com` | `roles/run.admin`, `roles/iam.serviceAccountUser`, `roles/artifactregistry.writer` |
 | **API Runtime SA** | `api-runtime@PROJECT_ID.iam.gserviceaccount.com` | `roles/secretmanager.secretAccessor`, `roles/cloudsql.client`, `roles/storage.objectAdmin`, `roles/cloudtasks.enqueuer` |
+| **Scheduler Caller SA** | `scheduler-invoker@PROJECT_ID.iam.gserviceaccount.com` | `roles/run.invoker` |
+
+If Firebase Hosting deploys are performed from Cloud Build, also grant the minimum Firebase/GCP roles required for Hosting deploys to the build identity after validating the exact project setup.
 
 ---
 
@@ -77,6 +94,11 @@ The `cloudbuild.yaml` in the root handles:
 3. Building the Web App.
 4. Deploying to Firebase Hosting.
 
+Important notes:
+- The current `cloudbuild.yaml` keeps API and web deployment in one file for convenience, but you may decide to split them into `cloudbuild.api.yaml` and `cloudbuild.web.yaml` later.
+- Substitute placeholder values such as `_CLOUDSQL_CONNECTION_NAME`, `_RUNTIME_SA`, and `_VITE_API_URL` before first use.
+- The Firebase deploy step uses `firebase-tools` on top of a Node image rather than assuming a custom Firebase builder image exists.
+
 **To trigger manually:**
 ```bash
 gcloud builds submit --config cloudbuild.yaml .
@@ -86,7 +108,7 @@ gcloud builds submit --config cloudbuild.yaml .
 
 ## 5. Database Migrations
 
-Use `prisma migrate deploy` to apply migrations to production. This should be run as part of the deployment pipeline or manually from a secure environment with access to the DB.
+Use `prisma migrate deploy` to apply migrations to production. Do **not** use `prisma migrate dev` against Cloud SQL. This should be run as part of the deployment pipeline or manually from a secure environment with access to the DB.
 
 **Manual migration from local (using Cloud SQL Proxy):**
 1. Start proxy: `./cloud-sql-proxy PROJECT_ID:REGION:INSTANCE_NAME`
@@ -97,9 +119,17 @@ Use `prisma migrate deploy` to apply migrations to production. This should be ru
 ## 6. Reminders (Scheduler + Tasks)
 
 ### Architecture
-1. **Cloud Scheduler** hits `POST /api/internal/jobs/reminders/orchestrate` (protected by OIDC).
+1. **Cloud Scheduler** hits `POST /api/internal/jobs/reminders/orchestrate`.
 2. The orchestrator identifies due reminders and enqueues individual **Cloud Tasks**.
 3. **Cloud Tasks** hits `POST /api/internal/jobs/reminders/deliver` for each message.
+4. Each delivery request must carry a dedupe key so repeated attempts do not create duplicate sends.
+
+Current repo status:
+- The internal endpoints already exist in `apps/api/src/routes/internal-jobs.ts`.
+- They currently use a shared bearer token. Replace this with OIDC/IAM-based verification when the Cloud Run deployment is active.
+- The current queue abstraction lives in `apps/api/src/lib/task-queue.ts`.
+- `inline` mode sends immediately for local development.
+- `gcp` mode is a deployment-shaped stub and still needs a real Cloud Tasks client implementation.
 
 ### Setup Task Queue
 ```bash
@@ -113,12 +143,14 @@ gcloud tasks queues create reminder-delivery --location=us-central1
 1. Create a bucket: `gs://steadycut-photos-[PROJECT_ID]`.
 2. Update the API to use the GCS adapter for uploads.
 3. Use **Signed URLs** for secure frontend access.
+4. Replace the current placeholder `GcsStorageProvider` implementation with the real `@google-cloud/storage` SDK.
 
 ---
 
 ## 8. Monitoring & Cost Awareness
 
 - **Logging:** View logs in Cloud Run console or Cloud Logging.
+- **Monitoring:** Create alerts for Cloud Run 5xx rate, latency, and Cloud SQL CPU/storage pressure.
 - **Cost:**
   - Cloud Run scales to zero (cheap for low traffic).
   - Cloud SQL is the primary fixed cost (approx. $10-30/mo for small instances).

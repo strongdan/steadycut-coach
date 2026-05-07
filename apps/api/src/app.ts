@@ -4,6 +4,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import pinoHttp from "pino-http";
+import path from "node:path";
 
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
@@ -31,6 +32,7 @@ app.use(
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 app.use(pinoHttp({ logger }));
+app.use("/uploads", express.static(path.resolve(process.cwd(), env.UPLOADS_DIR)));
 
 app.get("/", (_req, res) => {
   res.json({

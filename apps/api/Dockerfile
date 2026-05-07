@@ -1,52 +1,46 @@
-# Multi-stage Dockerfile for pnpm monorepo
+# Multi-stage Dockerfile for the pnpm monorepo API service.
 FROM node:22-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# Stage 1: Build
 FROM base AS build
 WORKDIR /usr/src/app
 
-# Copy lockfile and workspace config
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-# Copy shared package
+COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/shared ./packages/shared
-# Copy API package
 COPY apps/api ./apps/api
 
-# Install all dependencies (required for building)
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# The repo does not currently commit a pnpm lockfile. Prefer committing one later
+# and switching this back to --frozen-lockfile for reproducible production builds.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --no-frozen-lockfile
 
-# Build shared package first
 RUN pnpm --filter @steadycut/shared build
-# Build API package
+RUN pnpm --filter @steadycut/api prisma:generate
 RUN pnpm --filter @steadycut/api build
 
-# Prune dev dependencies
-RUN pnpm install --prod --frozen-lockfile
+FROM base AS prod-deps
+WORKDIR /usr/src/app
 
-# Stage 2: Runtime
+COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --no-frozen-lockfile
+
 FROM base AS runtime
 WORKDIR /usr/src/app
 
-# Set production environment
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Copy node_modules from build stage
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/package.json ./package.json
+COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build /usr/src/app/package.json ./package.json
+COPY --from=build /usr/src/app/tsconfig.base.json ./tsconfig.base.json
 COPY --from=build /usr/src/app/packages/shared ./packages/shared
 COPY --from=build /usr/src/app/apps/api ./apps/api
 
-# Ensure Prisma Client is generated for the runtime environment
 WORKDIR /usr/src/app/apps/api
-RUN pnpm prisma generate
-
-# Expose port for Cloud Run
 EXPOSE 8080
-
-# Start the application
 CMD [ "node", "dist/index.js" ]

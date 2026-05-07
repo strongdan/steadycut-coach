@@ -134,6 +134,7 @@ pnpm --filter @steadycut/api test
 - Weekly reviews are generated from recent check-ins and basic adherence/recovery heuristics.
 - Reminder preferences are persisted, but there is no job scheduler or Twilio delivery worker yet.
 - Internal reminder routes exist for orchestration and delivery, protected by an internal bearer token.
+- Reminder orchestration now fans out through a task-queue abstraction with `inline` development mode and a `gcp` deployment mode stub.
 
 ## Product notes
 
@@ -141,7 +142,7 @@ pnpm --filter @steadycut/api test
 - The check-in form supports optional weight and steps, simple adherence signals, and recovery markers.
 - The seed templates match the plan assumptions in the prompt.
 - Reminder logic, Twilio, scheduled jobs, in-app chat, weekly reviews, and photo uploads are intentionally deferred to later phases, but the Prisma schema leaves room for them.
-- The reminder orchestration endpoint currently returns queued payloads for a scheduler/task layer and uses a placeholder SMS sender with dedupe keys recorded in `SmsMessage`.
+- The reminder orchestration endpoint now enqueues delivery jobs through a queue abstraction. In `inline` mode it also sends immediately for local development; in `gcp` mode it is shaped for Cloud Tasks integration.
 - Dinner suggestions should be sent later in the afternoon via SMS, and occasional breakfast/lunch ideas later in the evening. That scheduling behavior is not implemented yet, but the reminder model is structured for it.
 
 ## Recommended next tasks

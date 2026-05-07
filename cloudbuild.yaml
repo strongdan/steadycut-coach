@@ -1,5 +1,5 @@
 steps:
-  # 1. Build and push the API container image to Artifact Registry
+  # Build and push the API container image to Artifact Registry.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-api'
     args:
@@ -16,7 +16,7 @@ steps:
       - 'push'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/api:${COMMIT_SHA}'
 
-  # 2. Deploy the API to Cloud Run
+  # Deploy the API to Cloud Run.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-api'
     entrypoint: gcloud
@@ -29,15 +29,16 @@ steps:
       - '--region'
       - '${_REGION}'
       - '--service-account'
-      - '${_RUNTIME_SA}'
+      - '${_RUNTIME_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com'
+      - '--allow-unauthenticated'
       - '--add-cloudsql-instances'
       - '${_CLOUDSQL_CONNECTION_NAME}'
       - '--update-env-vars'
-      - 'NODE_ENV=production,WEB_ORIGIN=${_WEB_ORIGIN}'
+      - 'NODE_ENV=production,WEB_ORIGIN=${_WEB_ORIGIN},AI_PROVIDER=${_AI_PROVIDER},DEFAULT_TIMEZONE=${_DEFAULT_TIMEZONE},SMS_BASE_URL=${_SMS_BASE_URL},STORAGE_DRIVER=${_STORAGE_DRIVER},GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}'
       - '--set-secrets'
-      - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest'
+      - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest'
 
-  # 3. Build the Web App for Firebase Hosting
+  # Build the web app for Firebase Hosting.
   - name: 'node:22'
     id: 'build-web'
     entrypoint: 'bash'
@@ -45,26 +46,36 @@ steps:
       - '-c'
       - |
         corepack enable
-        pnpm install --frozen-lockfile
+        pnpm install --no-frozen-lockfile
         pnpm --filter @steadycut/shared build
         pnpm --filter @steadycut/web build
     env:
       - 'VITE_API_URL=${_VITE_API_URL}'
 
-  # 4. Deploy to Firebase Hosting
-  # Note: Requires the Firebase token or Cloud Build SA with Firebase Admin permissions
-  - name: 'gcr.io/${PROJECT_ID}/firebase'
+  # Deploy the web app to Firebase Hosting.
+  # This uses firebase-tools directly rather than assuming a custom builder image.
+  - name: 'node:22'
     id: 'deploy-web'
-    args: ['deploy', '--only', 'hosting']
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        npm install -g firebase-tools
+        firebase deploy --project "$PROJECT_ID" --only hosting --non-interactive
 
 substitutions:
   _REGION: 'us-central1'
   _REPOSITORY: 'app'
   _SERVICE_NAME: 'steadycut-api'
-  _RUNTIME_SA: 'api-runtime@${PROJECT_ID}.iam.gserviceaccount.com'
+  _RUNTIME_SA_NAME: 'api-runtime'
   _CLOUDSQL_CONNECTION_NAME: 'PROJECT_ID:REGION:INSTANCE_NAME'
   _WEB_ORIGIN: 'https://steadycut-coach.web.app'
   _VITE_API_URL: 'https://steadycut-api-xyz.a.run.app/api'
+  _AI_PROVIDER: 'openai'
+  _DEFAULT_TIMEZONE: 'America/Juneau'
+  _SMS_BASE_URL: 'https://steadycut-coach.web.app'
+  _STORAGE_DRIVER: 'gcs'
+  _GCS_BUCKET_NAME: 'steadycut-photos'
 
 options:
   logging: CLOUD_LOGGING
