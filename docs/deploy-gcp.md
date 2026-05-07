@@ -25,7 +25,17 @@ This document outlines the production-ready deployment strategy for the steadycu
 
 ## 2. Infrastructure Setup
 
-### Enable APIs
+### Automated Setup
+You can use the provided setup script to automate API enablement, service account creation, and resource provisioning:
+```bash
+chmod +x setup-gcp.sh
+./setup-gcp.sh [PROJECT_ID]
+```
+
+### Manual Configuration
+If you prefer manual setup or need to verify steps:
+
+#### Enable APIs
 ```bash
 gcloud services enable \
   run.googleapis.com \
@@ -68,8 +78,10 @@ gcloud sql users create api_user --instance=steadycut-db --password=REPLACE_ME
 Store sensitive values. At a minimum:
 - `DATABASE_URL`: `postgresql://api_user:PASSWORD@localhost/steadycut_prod?host=/cloudsql/PROJECT_ID:REGION:INSTANCE_NAME`
 - `JWT_SECRET`: A long random string.
-- `INTERNAL_JOB_TOKEN`: bearer token for the current internal job routes.
-- `TASK_QUEUE_DRIVER`, `TASK_QUEUE_LOCATION`, `TASK_QUEUE_NAME`, `TASK_QUEUE_TARGET_URL`: queue configuration for reminder fanout.
+- `INTERNAL_JOB_TOKEN`: A secure bearer token for internal jobs.
+- `TASK_QUEUE_DRIVER`: `gcp`
+- `STORAGE_DRIVER`: `gcs`
+- `GCS_BUCKET_NAME`: `steadycut-photos-[PROJECT_ID]`
 - `OPENAI_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` as features come online.
 
 ---
@@ -104,6 +116,8 @@ Important notes:
 gcloud builds submit --config cloudbuild.yaml .
 ```
 
+For trigger strategy and CI/CD rollout details, see [CI/CD Setup for Google Cloud](ci-cd-gcp.md).
+
 ---
 
 ## 5. Database Migrations
@@ -125,11 +139,9 @@ Use `prisma migrate deploy` to apply migrations to production. Do **not** use `p
 4. Each delivery request must carry a dedupe key so repeated attempts do not create duplicate sends.
 
 Current repo status:
-- The internal endpoints already exist in `apps/api/src/routes/internal-jobs.ts`.
-- They currently use a shared bearer token. Replace this with OIDC/IAM-based verification when the Cloud Run deployment is active.
-- The current queue abstraction lives in `apps/api/src/lib/task-queue.ts`.
-- `inline` mode sends immediately for local development.
-- `gcp` mode is a deployment-shaped stub and still needs a real Cloud Tasks client implementation.
+- The internal endpoints exist in `apps/api/src/routes/internal-jobs.ts`.
+- They are protected by the `INTERNAL_JOB_TOKEN`.
+- The `gcp` task queue mode is implemented in `apps/api/src/lib/task-queue.ts` using the `@google-cloud/tasks` SDK.
 
 ### Setup Task Queue
 ```bash
@@ -141,9 +153,8 @@ gcloud tasks queues create reminder-delivery --location=us-central1
 ## 7. Progress Photos (Cloud Storage)
 
 1. Create a bucket: `gs://steadycut-photos-[PROJECT_ID]`.
-2. Update the API to use the GCS adapter for uploads.
-3. Use **Signed URLs** for secure frontend access.
-4. Replace the current placeholder `GcsStorageProvider` implementation with the real `@google-cloud/storage` SDK.
+2. The API is configured to use the `GcsStorageProvider` in `apps/api/src/lib/storage.ts` when `STORAGE_DRIVER=gcs`.
+3. It uses **Signed URLs** for secure frontend access.
 
 ---
 

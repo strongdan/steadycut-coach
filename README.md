@@ -120,6 +120,8 @@ Refer to the [GCP Deployment Runbook](docs/deploy-gcp.md) for detailed instructi
 - Deploying the frontend to Firebase Hosting
 - Secret management and reminder job orchestration
 
+For Cloud Build trigger strategy and GitHub-driven automation, see [CI/CD Setup for Google Cloud](docs/ci-cd-gcp.md).
+
 Run API tests:
 
 ```bash

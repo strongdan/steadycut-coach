@@ -1,7 +1,10 @@
+import { Storage } from "@google-cloud/storage";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { env } from "../config/env.js";
+
+const gcs = new Storage();
 
 export type StoredFile = {
   storageKey: string;
@@ -55,10 +58,19 @@ class GcsStorageProvider implements StorageProvider {
 
     const folder = params.folder ?? "progress-photos";
     const storageKey = `${folder}/${Date.now()}-${params.filename.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+    const bucket = gcs.bucket(env.GCS_BUCKET_NAME);
+    const file = bucket.file(storageKey);
+
+    await file.save(params.buffer, {
+      contentType: params.contentType,
+      metadata: {
+        cacheControl: "public, max-age=31536000",
+      },
+    });
 
     return {
       storageKey,
-      publicUrl: `gs://${env.GCS_BUCKET_NAME}/${storageKey}`,
+      publicUrl: `https://storage.googleapis.com/${env.GCS_BUCKET_NAME}/${storageKey}`,
     };
   }
 
@@ -67,7 +79,16 @@ class GcsStorageProvider implements StorageProvider {
       throw new Error("GCS_BUCKET_NAME must be configured when STORAGE_DRIVER=gcs.");
     }
 
-    return `gs://${env.GCS_BUCKET_NAME}/${storageKey}`;
+    const bucket = gcs.bucket(env.GCS_BUCKET_NAME);
+    const file = bucket.file(storageKey);
+
+    const [url] = await file.getSignedUrl({
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    });
+
+    return url;
   }
 }
 

@@ -1,5 +1,9 @@
+import { CloudTasksClient } from "@google-cloud/tasks";
+
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+
+const client = new CloudTasksClient();
 
 export type ReminderDeliveryTaskPayload = {
   reminderId: string;
@@ -41,21 +45,41 @@ class InlineTaskQueueProvider implements TaskQueueProvider {
 
 class GcpTaskQueueProvider implements TaskQueueProvider {
   async enqueueReminderDelivery(payload: ReminderDeliveryTaskPayload): Promise<EnqueueResult> {
+    const parent = client.queuePath(
+      process.env.GOOGLE_CLOUD_PROJECT || "steadycut-coach-prod",
+      env.TASK_QUEUE_LOCATION,
+      env.TASK_QUEUE_NAME,
+    );
+
+    const body = JSON.stringify(payload);
+    const task = {
+      httpRequest: {
+        httpMethod: "POST" as const,
+        url: env.TASK_QUEUE_TARGET_URL,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.INTERNAL_JOB_TOKEN}`,
+        },
+        body: Buffer.from(body).toString("base64"),
+      },
+    };
+
     logger.info(
       {
-        queue: env.TASK_QUEUE_NAME,
-        location: env.TASK_QUEUE_LOCATION,
+        queue: parent,
         targetUrl: env.TASK_QUEUE_TARGET_URL,
         reminderId: payload.reminderId,
         userId: payload.userId,
         dedupeKey: payload.dedupeKey,
       },
-      "Prepared reminder delivery for GCP task queue.",
+      "Enqueuing reminder delivery to GCP Cloud Tasks.",
     );
+
+    const [response] = await client.createTask({ parent, task });
 
     return {
       mode: "gcp",
-      taskName: `gcp-${payload.dedupeKey}`,
+      taskName: response.name || "unknown",
       targetUrl: env.TASK_QUEUE_TARGET_URL,
     };
   }

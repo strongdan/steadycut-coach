@@ -1,0 +1,30 @@
+steps:
+  - name: 'node:22'
+    id: 'validate-monorepo'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        corepack enable
+        pnpm install --no-frozen-lockfile
+        pnpm --filter @steadycut/shared build
+        pnpm --filter @steadycut/api typecheck
+        pnpm --filter @steadycut/web typecheck
+        pnpm --filter @steadycut/api test
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-api-image'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/api-validate:${SHORT_SHA}'
+      - '-f'
+      - 'apps/api/Dockerfile'
+      - '.'
+
+substitutions:
+  _REGION: 'us-central1'
+  _REPOSITORY: 'app'
+
+options:
+  logging: CLOUD_LOGGING
