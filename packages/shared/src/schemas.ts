@@ -8,7 +8,7 @@ import {
   reminderTypeOptions,
   trainingStatusOptions,
   unitsOptions,
-} from "./constants";
+} from "./constants.js";
 
 export const registerSchema = z.object({
   email: z.string().email(),

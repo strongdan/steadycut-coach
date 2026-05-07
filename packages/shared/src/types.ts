@@ -7,7 +7,7 @@ import type {
   profileSchema,
   registerSchema,
   reminderPreferenceSchema,
-} from "./schemas";
+} from "./schemas.js";
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
