@@ -165,6 +165,10 @@ router.post("/password-reset/request", async (req, res, next) => {
         id: true,
         phoneNumber: true,
         passwordResetRequestedAt: true,
+        reminderPreferences: {
+          take: 1,
+          select: { channel: true },
+        },
       },
     });
 
@@ -198,11 +202,14 @@ router.post("/password-reset/request", async (req, res, next) => {
       },
     });
 
+    const channel = user.reminderPreferences?.[0]?.channel as "sms" | "whatsapp" | undefined;
+
     await sendSmsMessage({
       userId: user.id,
       toNumber: user.phoneNumber,
       body: `Your SteadyCut password reset code is: ${code}`,
       dedupeKey: `password-reset-${user.id}-${Date.now()}`,
+      channel: channel === "whatsapp" ? "whatsapp" : "sms",
     });
 
     res.json({

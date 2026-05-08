@@ -8,6 +8,7 @@ import { planRouter } from "./plan.js";
 import { progressPhotosRouter } from "./progress-photos.js";
 import { remindersRouter } from "./reminders.js";
 import { weeklyReviewsRouter } from "./weekly-reviews.js";
+import { adminRouter } from "./admin.js";
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/weekly-reviews", weeklyReviewsRouter);
 router.use("/reminders", remindersRouter);
 router.use("/progress-photos", progressPhotosRouter);
 router.use("/internal/jobs", internalJobsRouter);
+router.use("/admin", adminRouter);
 
 export const apiRouter = router;

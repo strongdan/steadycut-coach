@@ -2,6 +2,7 @@ import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { CheckInScreen } from "../features/checkins/check-in-screen";
 import { DashboardScreen } from "../features/dashboard/dashboard-screen";
+import { AdminScreen } from "../features/dashboard/admin-screen";
 import { AppShell } from "../features/layout/app-shell";
 import { ProfileScreen } from "../features/layout/profile-screen";
 import { ForgotPasswordScreen, LoginScreen, LandingScreen, RegisterScreen } from "../features/auth/auth-screens";
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
           { path: "plan", element: <PlanScreen /> },
           { path: "settings", element: <SettingsScreen /> },
           { path: "profile", element: <ProfileScreen /> },
+          { path: "admin", element: <AdminScreen /> },
         ],
       },
     ],
