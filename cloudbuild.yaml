@@ -63,6 +63,7 @@ steps:
         pnpm --filter @steadycut/web build
     env:
       - 'VITE_API_URL=${_VITE_API_URL}'
+      - 'VITE_RECAPTCHA_SITE_KEY=${_VITE_RECAPTCHA_SITE_KEY}'
 
   # Deploy the web app to Firebase Hosting.
   # This uses firebase-tools directly rather than assuming a custom builder image.
@@ -88,6 +89,7 @@ substitutions:
   _CLOUDSQL_CONNECTION_NAME: 'steadycut-coach-prod:us-central1:steadycut-db'
   _WEB_ORIGIN: 'https://steadycut-coach-prod.web.app'
   _VITE_API_URL: 'https://steadycut-api-lowoxw5dlq-uc.a.run.app/api'
+  _VITE_RECAPTCHA_SITE_KEY: '6LdE494sAAAAAFaAjcVZClhAM0zIyTZNqdQCCWYG'
   _AI_PROVIDER: 'openai'
   _DEFAULT_TIMEZONE: 'America/Juneau'
   _SMS_BASE_URL: 'https://steadycut-coach-prod.web.app'
