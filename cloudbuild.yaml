@@ -47,7 +47,7 @@ steps:
     args:
       - '-c'
       - |
-        pnpm --filter @steadycut/api prisma db push --accept-data-loss
+        npx prisma@6.19.3 db push --schema /usr/src/app/apps/api/prisma/schema.prisma --accept-data-loss
     secretEnv: ['DATABASE_URL']
 
   # Build the web app for Firebase Hosting.
