@@ -4,10 +4,44 @@ import { env } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
 import { logger } from "../config/logger.js";
 import { sendSmsMessage } from "../lib/sms.js";
+import { generateCoachFeedback } from "../lib/ai-coach.js";
 import { taskQueueProvider, type ReminderDeliveryTaskPayload } from "../lib/task-queue.js";
 import { requireInternalJobAuth } from "../middleware/internal-auth.js";
+import { HttpError } from "../lib/http-error.js";
 
 const router = Router();
+
+router.post("/test-ai-message", requireInternalJobAuth, async (req, res, next) => {
+  try {
+    const toNumber = String(req.body?.toNumber ?? "");
+    if (!toNumber) throw new HttpError(400, "toNumber is required.");
+
+    // 1. Have AI generate a personalized "Integration Test" message
+    const aiMessage = await generateCoachFeedback({
+      userName: "SteadyCut Creator",
+      tone: "standard",
+      adherenceScore: 10,
+      notes: "This is a system test to verify the AI-to-SMS pipeline is fully operational.",
+    });
+
+    // 2. Send it via the current messaging provider
+    const result = await sendSmsMessage({
+      userId: "system-test",
+      toNumber,
+      body: `Coach Gemini: ${aiMessage}`,
+      dedupeKey: `ai-test-${Date.now()}`,
+      channel: req.body?.channel || "sms",
+    });
+
+    res.json({
+      success: true,
+      aiMessage,
+      messagingStatus: result.reason,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.use(requireInternalJobAuth);
 
