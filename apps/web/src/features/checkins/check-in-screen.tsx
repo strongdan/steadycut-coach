@@ -87,7 +87,14 @@ export function CheckInScreen() {
         <ScoreRow label="Sleep quality" value={form.sleepQualityScore} onChange={(value) => setForm({ ...form, sleepQualityScore: value })} />
         
         <div className="space-y-2">
-          <span className="text-sm font-medium text-ink/75">Progress Photo</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-ink/75">Progress Photo (Optional)</span>
+            {photoUrl && (
+              <button onClick={() => setPhotoUrl(null)} className="text-xs font-medium text-clay hover:text-moss">
+                Clear
+              </button>
+            )}
+          </div>
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-black/10 bg-canvas p-4 text-center">
             {photoUrl ? (
               <img src={photoUrl} alt="Progress" className="h-48 w-full rounded-lg object-cover" />
