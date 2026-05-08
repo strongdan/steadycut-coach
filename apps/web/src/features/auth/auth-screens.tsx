@@ -21,31 +21,69 @@ const baseFields = {
 };
 
 export function LandingScreen() {
+  const navigate = useNavigate();
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between px-4 pb-10 pt-8 text-ink">
-      <div>
-        <div className="mb-8 inline-flex rounded-full bg-sand px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-clay">
-          4-month coaching PWA
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-between px-6 pb-12 pt-12 text-ink">
+      <div className="space-y-8">
+        <div>
+          <div className="inline-flex items-center space-x-2 rounded-full bg-sand px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-clay">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-moss opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-moss"></span>
+            </span>
+            <span>Adaptive AI Coaching Live</span>
+          </div>
+          <h1 className="mt-6 text-5xl font-bold leading-[1.1] tracking-tight text-moss">
+            SteadyCut <br />
+            <span className="text-clay">Coach</span>
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-ink/80">
+            Real fat-loss rules meets <span className="font-bold text-moss">Adaptive AI</span>. No obsessing, just repeatable wins delivered to your phone.
+          </p>
         </div>
-        <h1 className="max-w-xs text-4xl font-semibold leading-tight text-moss">
-          A practical fat-loss coach built around repeatable rules.
-        </h1>
-        <p className="mt-4 text-sm leading-6 text-ink/75">
-          Walk daily. Pregame meals with protein, fiber, and water. Train hard enough to keep muscle. Review patterns weekly, not obsessively.
-        </p>
+
+        <div className="space-y-6">
+          <FeatureItem
+            icon="🤖"
+            title="Adaptive AI via SMS/WhatsApp"
+            description="Our Gemini-powered coach analyzes your daily data and sends personalized check-in feedback directly to your phone."
+          />
+          <FeatureItem
+            icon="⚖️"
+            title="Repeatable Rules"
+            description="Focus on the essentials: Protein, Fiber, Water, and Steps. Simple adherence for permanent results."
+          />
+          <FeatureItem
+            icon="📊"
+            title="Weekly Pattern Reviews"
+            description="Automatic weekly classification (Green/Yellow/Red) to spot trends before they become plateaus."
+          />
+        </div>
       </div>
 
-      <Card className="space-y-4 bg-moss text-white">
-        <p className="text-sm text-white/80">Phase 1 includes auth, plan setup, dashboard, and daily check-ins.</p>
-        <div className="grid grid-cols-2 gap-3">
-          <a href="/register" className="rounded-full bg-white px-4 py-3 text-center text-sm font-semibold text-moss">
-            Create account
-          </a>
-          <a href="/login" className="rounded-full border border-white/30 px-4 py-3 text-center text-sm font-semibold text-white">
-            Log in
-          </a>
+      <div className="mt-12 space-y-4">
+        <Button onClick={() => navigate("/register")} className="h-14 w-full text-lg shadow-xl shadow-moss/10">
+          Start Your 4-Month Journey
+        </Button>
+        <div className="text-center">
+          <button onClick={() => navigate("/login")} className="text-sm font-semibold text-clay hover:text-moss hover:underline transition-all">
+            Welcome back? Log in here
+          </button>
         </div>
-      </Card>
+      </div>
+    </div>
+  );
+}
+
+function FeatureItem({ icon, title, description }: { icon: string; title: string; description: string }) {
+  return (
+    <div className="flex space-x-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sand text-xl">{icon}</div>
+      <div>
+        <h3 className="text-sm font-bold text-moss">{title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-ink/60">{description}</p>
+      </div>
     </div>
   );
 }
