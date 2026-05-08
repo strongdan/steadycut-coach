@@ -38,6 +38,7 @@ README.md
 - PostgreSQL Docker Compose setup
 - Prisma schema covering core Phase 1 models plus future-facing placeholders
 - Auth endpoints: `register`, `login`, `logout`, `me`
+- SMS-based password reset flow with request/confirm endpoints, resend cooldown, and invalid-attempt lockout
 - Plan endpoints: current, create, update
 - Dashboard endpoint for today’s checklist and coach nudge
 - Daily check-in endpoints with mock coaching feedback
@@ -137,6 +138,7 @@ pnpm --filter @steadycut/api test
 - Reminder preferences are persisted, but there is no job scheduler or Twilio delivery worker yet.
 - Internal reminder routes exist for orchestration and delivery, protected by an internal bearer token.
 - Reminder orchestration now fans out through a task-queue abstraction with `inline` development mode and a `gcp` deployment mode stub.
+- Password reset uses the phone number already on file to send a one-time SMS code. The current flow enforces a 60-second resend cooldown and locks the code after repeated invalid attempts.
 
 ## Product notes
 
@@ -153,4 +155,4 @@ pnpm --filter @steadycut/api test
 2. Add coach provider abstraction and connect weekly review/check-in text generation through it.
 3. Add a scheduler stub for Twilio message jobs, including late-afternoon dinner ideas and occasional late-evening breakfast/lunch suggestions.
 4. Expand profile/settings to support real reminder persistence, SMS consent, units, tone, and dashboard customization.
-5. Add API and UI tests for auth, plan creation, daily check-ins, and weekly review generation.
+5. Commit and apply Prisma migrations for each schema change, then broaden API and UI coverage for auth, plan creation, daily check-ins, and weekly review generation.

@@ -25,6 +25,7 @@ Do these first. CI/CD should automate a known-good deploy path, not discover one
 - Confirm Cloud Run can connect to Cloud SQL.
 - Confirm the API starts successfully with production secrets.
 - Commit a `pnpm-lock.yaml`.
+- Commit every Prisma migration before deploy. Cloud Build applies migrations; it does not generate them.
 
 That last item matters. The current repo does not commit a lockfile, so the build uses `--no-frozen-lockfile`. That is acceptable only as a temporary bridge.
 
@@ -47,6 +48,8 @@ Build config:
 Expected behavior:
 - build/push API image
 - deploy API to Cloud Run
+- deploy/update the Cloud Run migration job
+- run `prisma migrate deploy` against Cloud SQL
 - build web app
 - deploy web app to Firebase Hosting
 
@@ -112,6 +115,7 @@ Only proceed to triggers after this succeeds.
 Manual success criteria:
 - API image pushed to Artifact Registry
 - Cloud Run revision becomes healthy
+- Cloud Run migration job completes successfully
 - Web build succeeds
 - Firebase Hosting deploy completes
 
@@ -172,6 +176,12 @@ These should not be stored in source control:
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_PHONE_NUMBER`
+
+Production schema guidance:
+
+- Generate migrations locally against a dev database.
+- Commit migration directories under `apps/api/prisma/migrations`.
+- Do not switch production back to `prisma db push`.
 
 These are suitable as non-secret substitutions or env vars:
 

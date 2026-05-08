@@ -60,9 +60,25 @@ Plain runtime configuration should stay as Cloud Run env vars or Cloud Build sub
 The `cloudbuild.yaml` in the root handles the full pipeline:
 1. **Build & Push**: Builds the API Docker image using BuildKit.
 2. **Deploy API**: Deploys to Cloud Run with all secrets mapped.
-3. **Database Sync**: Automatically runs `npx prisma migrate deploy` in a Cloud Run Job.
+3. **Database Sync**: Deploys a dedicated Cloud Run Job and runs `prisma migrate deploy --schema prisma/schema.prisma` inside the API container.
 4. **Build Web**: Builds the React app with production environment variables.
 5. **Deploy Web**: Deploys the static assets to Firebase Hosting.
+
+### Migration Strategy
+
+Production now follows a migration-only path:
+
+- Never run `prisma db push` against production.
+- Generate migrations locally against a development database.
+- Commit the migration files to the repository.
+- Let the Cloud Run Job apply them with `prisma migrate deploy`.
+
+Because this project previously used `db push` to create the production schema, the production database must be baselined before `migrate deploy` can safely take over. The current migration history should include:
+
+- `0_init` as the production baseline
+- follow-up migrations such as `20260508000001_add_password_reset_fields`
+
+If the baseline is missing, `migrate deploy` will attempt to create existing tables and fail.
 
 ### Substitution Variables
 Ensure the following are set in your Cloud Build Trigger:
@@ -93,7 +109,23 @@ Progress photos are uploaded via the `GcsStorageProvider`.
 
 ---
 
-## 6. Staging vs Production
+## 6. Auth Recovery
+
+The API supports SMS-based password recovery using the phone number already stored on the account.
+
+- `POST /api/auth/password-reset/request`
+- `POST /api/auth/password-reset/confirm`
+
+Operational behavior:
+
+- Request responses do not reveal whether an account exists.
+- Reset codes expire after 15 minutes.
+- Requests are rate limited by a 60-second resend cooldown per account.
+- Repeated invalid reset-code submissions lock the code and require requesting a new one.
+
+---
+
+## 7. Staging vs Production
 
 To test changes safely:
 1. Create a project `steadycut-coach-staging`.
