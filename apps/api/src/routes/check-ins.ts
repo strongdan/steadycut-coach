@@ -7,8 +7,6 @@ import { HttpError } from "../lib/http-error.js";
 import { generateCoachFeedback } from "../lib/ai-coach.js";
 import { requireAuth } from "../middleware/auth.js";
 
-import { requireAuth } from "../middleware/auth.js";
-
 const router = Router();
 
 router.use(requireAuth);
