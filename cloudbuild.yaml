@@ -40,15 +40,24 @@ steps:
       - '--set-secrets'
       - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest,MESSAGING_DRIVER=MESSAGING_DRIVER:latest,TWILIO_WHATSAPP_NUMBER=TWILIO_WHATSAPP_NUMBER:latest'
 
-  # Database Schema Sync (Automated prisma db push)
-  - name: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/api:${COMMIT_SHA}'
+  # 3. Database Schema Sync (Using a Cloud Run Job for secure access)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'db-sync'
-    entrypoint: 'sh'
+    entrypoint: 'bash'
     args:
       - '-c'
       - |
-        npx prisma@6.19.3 db push --schema /usr/src/app/apps/api/prisma/schema.prisma --accept-data-loss
-    secretEnv: ['DATABASE_URL']
+        gcloud run jobs deploy steadycut-db-sync \
+          --image '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/api:${COMMIT_SHA}' \
+          --region '${_REGION}' \
+          --service-account '${_RUNTIME_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com' \
+          --set-cloudsql-instances '${_CLOUDSQL_CONNECTION_NAME}' \
+          --set-secrets 'DATABASE_URL=DATABASE_URL:latest' \
+          --command 'npx' \
+          --args 'prisma,db,push,--schema,apps/api/prisma/schema.prisma,--accept-data-loss' \
+          --project '${PROJECT_ID}' --quiet
+        
+        gcloud run jobs execute steadycut-db-sync --region '${_REGION}' --wait --project '${PROJECT_ID}' --quiet
 
   # Build the web app for Firebase Hosting.
   - name: 'node:22'
