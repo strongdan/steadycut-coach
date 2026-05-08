@@ -14,6 +14,23 @@ const upload = multer({
   },
 });
 
+const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+const progressPhotoInputSchema = z.object({
+  date: z
+    .string()
+    .optional()
+    .transform((value) => value ?? new Date().toISOString().slice(0, 10)),
+  label: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .optional()
+    .transform((value) => value ?? "Check-in Photo"),
+  notes: z.string().trim().max(1000).optional(),
+});
+
 const router = Router();
 
 router.use(requireAuth);
@@ -28,7 +45,7 @@ router.get("/", async (req, res, next) => {
 
     // Provide signed URLs if needed by the provider
     const photosWithUrls = await Promise.all(
-      photos.map(async (photo: any) => ({
+      photos.map(async (photo) => ({
         ...photo,
         fileUrl: storageProvider.getSignedReadUrl
           ? await storageProvider.getSignedReadUrl(photo.fileUrl)
@@ -48,9 +65,14 @@ router.post("/", upload.single("photo"), async (req, res, next) => {
       return res.status(400).json({ message: "No photo uploaded." });
     }
 
+    if (!allowedMimeTypes.has(req.file.mimetype)) {
+      return res.status(400).json({
+        message: "Unsupported image type. Use JPEG, PNG, or WebP.",
+      });
+    }
+
     const { id: userId } = (req as AuthedRequest).user;
-    const dateStr = req.body.date || new Date().toISOString().slice(0, 10);
-    const label = req.body.label || "Check-in Photo";
+    const input = progressPhotoInputSchema.parse(req.body);
 
     const { storageKey } = await storageProvider.save({
       filename: req.file.originalname,
@@ -62,10 +84,10 @@ router.post("/", upload.single("photo"), async (req, res, next) => {
     const photo = await prisma.progressPhoto.create({
       data: {
         userId,
-        date: new Date(dateStr),
-        label,
+        date: new Date(input.date),
+        label: input.label,
         fileUrl: storageKey,
-        notes: req.body.notes,
+        notes: input.notes,
       },
     });
 

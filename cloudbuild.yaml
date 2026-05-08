@@ -94,7 +94,7 @@ substitutions:
   _WEB_ORIGIN: 'https://steadycut-coach-prod.web.app'
   _VITE_API_URL: 'https://steadycut-api-lowoxw5dlq-uc.a.run.app/api'
   _VITE_RECAPTCHA_SITE_KEY: '6LdE494sAAAAAFaAjcVZClhAM0zIyTZNqdQCCWYG'
-  _AI_PROVIDER: 'openai'
+  _AI_PROVIDER: 'vertex'
   _DEFAULT_TIMEZONE: 'America/Juneau'
   _SMS_BASE_URL: 'https://steadycut-coach-prod.web.app'
   _STORAGE_DRIVER: 'gcs'

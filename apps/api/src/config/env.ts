@@ -10,7 +10,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(12),
   JWT_EXPIRES_IN: z.string().default("7d"),
-  AI_PROVIDER: z.enum(["mock", "openai"]).default("mock"),
+  AI_PROVIDER: z.enum(["mock", "openai", "vertex"]).default("mock"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
   TWILIO_ACCOUNT_SID: z.string().optional(),
