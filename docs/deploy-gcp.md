@@ -33,13 +33,25 @@ Store sensitive values in Secret Manager. The Cloud Run service is configured to
 | `JWT_SECRET` | Secret for signing auth tokens |
 | `INTERNAL_JOB_TOKEN` | Bearer token for Scheduler/Tasks authentication |
 | `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA v3 secret key |
-| `MESSAGING_DRIVER` | `mock`, `twilio`, or `meta` |
 | `TWILIO_ACCOUNT_SID` | Twilio account identifier |
 | `TWILIO_AUTH_TOKEN` | Twilio authentication token |
 | `TWILIO_PHONE_NUMBER` | Twilio sender phone number |
 | `TWILIO_WHATSAPP_NUMBER`| Twilio WhatsApp sandbox/sender number |
 | `META_WHATSAPP_TOKEN` | Direct Meta WhatsApp API token |
 | `META_PHONE_NUMBER_ID` | Direct Meta WhatsApp Phone ID |
+
+Plain runtime configuration should stay as Cloud Run env vars or Cloud Build substitutions, not Secret Manager secrets:
+
+- `AI_PROVIDER`
+- `MESSAGING_DRIVER`
+- `STORAGE_DRIVER`
+- `GCS_BUCKET_NAME`
+- `TASK_QUEUE_DRIVER`
+- `TASK_QUEUE_NAME`
+- `TASK_QUEUE_LOCATION`
+- `TASK_QUEUE_TARGET_URL`
+- `WEB_ORIGIN`
+- `SMS_BASE_URL`
 
 ---
 
@@ -48,7 +60,7 @@ Store sensitive values in Secret Manager. The Cloud Run service is configured to
 The `cloudbuild.yaml` in the root handles the full pipeline:
 1. **Build & Push**: Builds the API Docker image using BuildKit.
 2. **Deploy API**: Deploys to Cloud Run with all secrets mapped.
-3. **Database Sync**: Automatically runs `npx prisma db push` to sync the schema.
+3. **Database Sync**: Automatically runs `npx prisma migrate deploy` in a Cloud Run Job.
 4. **Build Web**: Builds the React app with production environment variables.
 5. **Deploy Web**: Deploys the static assets to Firebase Hosting.
 
@@ -62,7 +74,8 @@ Ensure the following are set in your Cloud Build Trigger:
 ## 4. Messaging & Reminders
 
 ### Provider Pattern
-The app supports multiple messaging drivers. Switch between them by updating the `MESSAGING_DRIVER` secret:
+The app supports multiple messaging drivers. Switch between them by updating the `MESSAGING_DRIVER` runtime configuration:
+- `MESSAGING_DRIVER` is now plain runtime config, not a Secret Manager secret.
 - **Meta**: Direct WhatsApp integration (Cheapest/Free tier).
 - **Twilio**: Reliable SMS and WhatsApp backup.
 - **Mock**: Logs messages to Cloud Logging (for development).
@@ -86,4 +99,3 @@ To test changes safely:
 1. Create a project `steadycut-coach-staging`.
 2. Run `./setup-gcp.sh steadycut-coach-staging`.
 3. Create a separate Cloud Build trigger for your `develop` branch.
-

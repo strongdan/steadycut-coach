@@ -32,6 +32,10 @@ const progressPhotoInputSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 
+function isValidDateOnly(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`));
+}
+
 const router = Router();
 
 router.use(requireAuth);
@@ -74,6 +78,11 @@ router.post("/", upload.single("photo"), async (req, res, next) => {
 
     const { id: userId } = (req as AuthedRequest).user;
     const input = progressPhotoInputSchema.parse(req.body);
+    if (!isValidDateOnly(input.date)) {
+      return res.status(400).json({
+        message: "Invalid date. Use YYYY-MM-DD.",
+      });
+    }
 
     const { storageKey } = await storageProvider.save({
       filename: req.file.originalname,
@@ -92,7 +101,14 @@ router.post("/", upload.single("photo"), async (req, res, next) => {
       },
     });
 
-    res.status(201).json({ photo });
+    res.status(201).json({
+      photo: {
+        ...photo,
+        fileUrl: storageProvider.getSignedReadUrl
+          ? await storageProvider.getSignedReadUrl(photo.fileUrl)
+          : photo.fileUrl,
+      },
+    });
   } catch (error) {
     next(error);
   }

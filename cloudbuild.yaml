@@ -36,9 +36,9 @@ steps:
       - '--add-cloudsql-instances'
       - '${_CLOUDSQL_CONNECTION_NAME}'
       - '--update-env-vars'
-      - 'NODE_ENV=production,WEB_ORIGIN=${_WEB_ORIGIN},AI_PROVIDER=${_AI_PROVIDER},DEFAULT_TIMEZONE=${_DEFAULT_TIMEZONE},SMS_BASE_URL=${_SMS_BASE_URL},STORAGE_DRIVER=${_STORAGE_DRIVER},GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}'
+      - 'NODE_ENV=production,WEB_ORIGIN=${_WEB_ORIGIN},AI_PROVIDER=${_AI_PROVIDER},DEFAULT_TIMEZONE=${_DEFAULT_TIMEZONE},SMS_BASE_URL=${_SMS_BASE_URL},STORAGE_DRIVER=${_STORAGE_DRIVER},GCS_BUCKET_NAME=${_GCS_BUCKET_NAME},MESSAGING_DRIVER=${_MESSAGING_DRIVER}'
       - '--set-secrets'
-      - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest,MESSAGING_DRIVER=MESSAGING_DRIVER:latest,TWILIO_WHATSAPP_NUMBER=TWILIO_WHATSAPP_NUMBER:latest'
+      - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest,TWILIO_WHATSAPP_NUMBER=TWILIO_WHATSAPP_NUMBER:latest'
 
   # 3. Database Schema Sync (Using a Cloud Run Job for secure access)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -54,7 +54,7 @@ steps:
           --set-cloudsql-instances '${_CLOUDSQL_CONNECTION_NAME}' \
           --set-secrets 'DATABASE_URL=DATABASE_URL:latest' \
           --command 'npx' \
-          --args 'prisma@6.19.3,db,push,--schema,prisma/schema.prisma,--accept-data-loss' \
+          --args 'prisma@6.19.3,migrate,deploy,--schema,apps/api/prisma/schema.prisma' \
           --project '${PROJECT_ID}' --quiet
         
         gcloud run jobs execute steadycut-db-sync --region '${_REGION}' --wait --project '${PROJECT_ID}' --quiet
@@ -99,6 +99,7 @@ substitutions:
   _SMS_BASE_URL: 'https://steadycut-coach-prod.web.app'
   _STORAGE_DRIVER: 'gcs'
   _GCS_BUCKET_NAME: 'steadycut-photos-steadycut-coach-prod'
+  _MESSAGING_DRIVER: 'twilio'
 
 options:
   logging: CLOUD_LOGGING_ONLY

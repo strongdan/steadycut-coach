@@ -1,20 +1,6 @@
-import { VertexAI } from "@google-cloud/vertexai";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
-
-const vertexAI = new VertexAI({
-  project: process.env.GOOGLE_CLOUD_PROJECT || "steadycut-coach-prod",
-  location: "us-central1",
-});
-
-const generativeModel = vertexAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-  generationConfig: {
-    maxOutputTokens: 512,
-    temperature: 0.7,
-    topP: 0.8,
-  },
-});
+import { VertexAI } from "@google-cloud/vertexai";
 
 export type CoachingInput = {
   userName: string;
@@ -27,6 +13,10 @@ export type CoachingInput = {
 };
 
 export async function generateCoachFeedback(input: CoachingInput): Promise<string> {
+  if (env.AI_PROVIDER !== "vertex") {
+    return buildFallbackResponse(input);
+  }
+
   const prompt = `
     You are a professional fat-loss coach for a program called SteadyCut. 
     Your goal is to provide brief, actionable, and supportive feedback on a client's daily check-in.
@@ -48,13 +38,39 @@ export async function generateCoachFeedback(input: CoachingInput): Promise<strin
   `;
 
   try {
+    const vertexAI = new VertexAI({
+      project: process.env.GOOGLE_CLOUD_PROJECT || "steadycut-coach-prod",
+      location: "us-central1",
+    });
+
+    const generativeModel = vertexAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        maxOutputTokens: 512,
+        temperature: 0.7,
+        topP: 0.8,
+      },
+    });
+
     const result = await generativeModel.generateContent(prompt);
     const response = result.response;
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    return text?.trim() || "Great work today. Keep focusing on the fundamentals!";
+
+    return text?.trim() || buildFallbackResponse(input);
   } catch (error) {
     logger.error({ error }, "Failed to generate AI coaching feedback.");
-    return "Nice job checking in today. Stay consistent!";
+    return buildFallbackResponse(input);
   }
+}
+
+function buildFallbackResponse(input: CoachingInput): string {
+  if (input.adherenceScore >= 7) {
+    return `Strong day, ${input.userName}. Repeat the same structure tomorrow and protect the basics.`;
+  }
+
+  if ((input.energy ?? 3) <= 2) {
+    return `${input.userName}, keep tomorrow simple: walk, protein, water, and recover better.`;
+  }
+
+  return `${input.userName}, keep it narrow tomorrow: hit protein, water, and one clean rule.`;
 }
