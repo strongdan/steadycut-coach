@@ -40,14 +40,14 @@ steps:
       - '--set-secrets'
       - 'DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_PHONE_NUMBER=TWILIO_PHONE_NUMBER:latest,MESSAGING_DRIVER=MESSAGING_DRIVER:latest,TWILIO_WHATSAPP_NUMBER=TWILIO_WHATSAPP_NUMBER:latest'
 
-  # Database Schema Sync (Automated npx prisma db push)
+  # Database Schema Sync (Automated prisma db push)
   - name: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/api:${COMMIT_SHA}'
     id: 'db-sync'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        npx prisma db push --schema apps/api/prisma/schema.prisma --accept-data-loss
+        pnpm --filter @steadycut/api prisma db push --accept-data-loss
     secretEnv: ['DATABASE_URL']
 
   # Build the web app for Firebase Hosting.
