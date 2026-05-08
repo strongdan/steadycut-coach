@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 
 import { HttpError } from "../lib/http-error.js";
+import { logger } from "../config/logger.js";
 
 export const errorHandler = (
   error: unknown,
@@ -19,6 +20,8 @@ export const errorHandler = (
   if (error instanceof HttpError) {
     return res.status(error.statusCode).json({ message: error.message });
   }
+
+  logger.error({ error }, "Unhandled server error.");
 
   return res.status(500).json({
     message: "Internal server error.",
