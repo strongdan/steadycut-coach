@@ -45,16 +45,30 @@ class MockProvider implements MessagingProvider {
       select: { id: true },
     });
 
-    const smsMessage = await prisma.smsMessage.create({
-      data: {
-        userId: userExists ? input.userId : null,
+    let smsMessage;
+    if (userExists) {
+      smsMessage = await prisma.smsMessage.create({
+        data: {
+          userId: input.userId,
+          direction: "outbound",
+          fromNumber: "MOCK",
+          toNumber: input.toNumber,
+          body: input.body,
+          providerMessageId,
+        },
+      });
+    } else {
+      smsMessage = {
+        id: "test-mock-id",
+        userId: null,
         direction: "outbound",
         fromNumber: "MOCK",
         toNumber: input.toNumber,
         body: input.body,
         providerMessageId,
-      },
-    });
+        createdAt: new Date(),
+      };
+    }
 
     return { skipped: false, reason: "mock_sent", smsMessage };
   }
@@ -97,17 +111,32 @@ class TwilioProvider implements MessagingProvider {
       select: { id: true },
     });
 
-    const smsMessage = await prisma.smsMessage.create({
-      data: {
-        userId: userExists ? input.userId : null,
+    let smsMessage;
+    if (userExists) {
+      smsMessage = await prisma.smsMessage.create({
+        data: {
+          userId: input.userId,
+          direction: "outbound",
+          fromNumber: from ?? "unknown",
+          toNumber: input.toNumber,
+          body: input.body,
+          providerMessageId: message.sid || providerMessageId,
+          status: message.status,
+        },
+      });
+    } else {
+      smsMessage = {
+        id: "test-twilio-id",
+        userId: null,
         direction: "outbound",
         fromNumber: from ?? "unknown",
         toNumber: input.toNumber,
         body: input.body,
         providerMessageId: message.sid || providerMessageId,
         status: message.status,
-      },
-    });
+        createdAt: new Date(),
+      };
+    }
 
     return { skipped: false, reason: "sent", smsMessage };
   }
@@ -161,17 +190,32 @@ class MetaProvider implements MessagingProvider {
       select: { id: true },
     });
 
-    const smsMessage = await prisma.smsMessage.create({
-      data: {
-        userId: userExists ? input.userId : null,
+    let smsMessage;
+    if (userExists) {
+      smsMessage = await prisma.smsMessage.create({
+        data: {
+          userId: input.userId,
+          direction: "outbound",
+          fromNumber: env.META_PHONE_NUMBER_ID,
+          toNumber: input.toNumber,
+          body: input.body,
+          providerMessageId: result.messages?.[0]?.id || providerMessageId,
+          status: "sent",
+        },
+      });
+    } else {
+      smsMessage = {
+        id: "test-meta-id",
+        userId: null,
         direction: "outbound",
         fromNumber: env.META_PHONE_NUMBER_ID,
         toNumber: input.toNumber,
         body: input.body,
         providerMessageId: result.messages?.[0]?.id || providerMessageId,
         status: "sent",
-      },
-    });
+        createdAt: new Date(),
+      };
+    }
 
     return { skipped: false, reason: "sent", smsMessage };
   }
