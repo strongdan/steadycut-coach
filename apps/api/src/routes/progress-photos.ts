@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
+import type { ProgressPhoto } from "@prisma/client";
 
 import { prisma } from "../db/prisma.js";
 import { storageProvider } from "../lib/storage.js";
@@ -45,7 +46,7 @@ router.get("/", async (req, res, next) => {
 
     // Provide signed URLs if needed by the provider
     const photosWithUrls = await Promise.all(
-      photos.map(async (photo) => ({
+      photos.map(async (photo: ProgressPhoto) => ({
         ...photo,
         fileUrl: storageProvider.getSignedReadUrl
           ? await storageProvider.getSignedReadUrl(photo.fileUrl)

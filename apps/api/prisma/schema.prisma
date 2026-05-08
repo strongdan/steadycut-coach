@@ -118,6 +118,8 @@ model User {
   units                   Units                  @default(imperial)
   smsConsent              Boolean                @default(false)
   smsOptedOutAt           DateTime?
+  otpCode                 String?
+  otpExpiresAt            DateTime?
   preferredReminderTimes  Json?
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
@@ -334,6 +336,8 @@ model WeeklyReview {
   recommendationStatus RecommendationStatus @default(green)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+
+  @@unique([userId, weekStartDate])
 }
 
 model ProgressPhoto {
