@@ -94,12 +94,20 @@ export function RegisterScreen() {
   const [form, setForm] = useState(baseFields);
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
+  const [recaptchaWarning, setRecaptchaWarning] = useState("");
 
   const mutation = useMutation({
     mutationFn: async () => {
       let recaptchaToken = "";
+      setRecaptchaWarning("");
       if (executeRecaptcha) {
-        recaptchaToken = await executeRecaptcha("register");
+        try {
+          recaptchaToken = await executeRecaptcha("register");
+        } catch {
+          setRecaptchaWarning(
+            "reCAPTCHA is unavailable right now. Continuing without a browser challenge.",
+          );
+        }
       }
 
       return api<AuthResponse & { user: { name: string } }>("/auth/register", {
@@ -160,6 +168,7 @@ export function RegisterScreen() {
           Already have an account? Log in
         </button>
       </div>
+      {recaptchaWarning ? <p className="text-xs text-clay">{recaptchaWarning}</p> : null}
       {mutation.error ? <p className="text-sm text-red-600">{mutation.error.message}</p> : null}
     </AuthLayout>
   );
@@ -192,11 +201,87 @@ export function LoginScreen() {
         {mutation.isPending ? "Logging in..." : "Log in"}
       </Button>
       <div className="text-center">
+        <button onClick={() => navigate("/forgot-password")} className="text-xs font-medium text-clay hover:underline">
+          Forgot password?
+        </button>
+      </div>
+      <div className="text-center">
         <button onClick={() => navigate("/register")} className="text-xs font-medium text-moss hover:underline">
           New here? Create an account
         </button>
       </div>
       {mutation.error ? <p className="text-sm text-red-600">{mutation.error.message}</p> : null}
+    </AuthLayout>
+  );
+}
+
+export function ForgotPasswordScreen() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState<"request" | "confirm">("request");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  const requestMutation = useMutation({
+    mutationFn: () =>
+      api<{ message: string }>("/auth/password-reset/request", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    onSuccess: () => {
+      setStep("confirm");
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () =>
+      api<{ message: string }>("/auth/password-reset/confirm", {
+        method: "POST",
+        body: JSON.stringify({ email, code, newPassword }),
+      }),
+    onSuccess: () => {
+      navigate("/login");
+    },
+  });
+
+  if (step === "confirm") {
+    return (
+      <AuthLayout
+        title="Enter reset code"
+        subtitle="We sent a 6-digit code to the phone number on file, if SMS recovery is enabled for this account."
+      >
+        <input className={inputClass} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input className={inputClass} placeholder="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} />
+        <input className={inputClass} placeholder="New password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        <Button onClick={() => confirmMutation.mutate()} disabled={confirmMutation.isPending}>
+          {confirmMutation.isPending ? "Updating..." : "Reset password"}
+        </Button>
+        <div className="text-center">
+          <button onClick={() => setStep("request")} className="text-xs font-medium text-moss hover:underline">
+            Start over
+          </button>
+        </div>
+        {confirmMutation.error ? <p className="text-sm text-red-600">{confirmMutation.error.message}</p> : null}
+      </AuthLayout>
+    );
+  }
+
+  return (
+    <AuthLayout
+      title="Reset your password"
+      subtitle="Enter your account email. If a phone number is on file, we’ll text a one-time code for password reset."
+    >
+      <input className={inputClass} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Button onClick={() => requestMutation.mutate()} disabled={requestMutation.isPending}>
+        {requestMutation.isPending ? "Sending..." : "Send SMS code"}
+      </Button>
+      <div className="text-center">
+        <button onClick={() => navigate("/login")} className="text-xs font-medium text-moss hover:underline">
+          Back to login
+        </button>
+      </div>
+      {requestMutation.data ? <p className="text-sm text-moss">{requestMutation.data.message}</p> : null}
+      {requestMutation.error ? <p className="text-sm text-red-600">{requestMutation.error.message}</p> : null}
     </AuthLayout>
   );
 }

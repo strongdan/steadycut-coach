@@ -1,7 +1,7 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import { prismaMock } from "./mocks.js";
+import { prismaMock, smsMock } from "./mocks.js";
 import { app } from "../src/app.js";
 
 const registerBody = {
@@ -118,5 +118,66 @@ describe("auth endpoints", () => {
       units: "imperial",
       smsConsent: true,
     });
+  });
+
+  it("requests a password reset code without leaking account existence", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: "user-1",
+      phoneNumber: "+19075550123",
+    });
+    prismaMock.user.update.mockResolvedValueOnce({ id: "user-1" });
+
+    const response = await request(app)
+      .post("/api/auth/password-reset/request")
+      .send({ email: "alex@example.com" })
+      .expect(200);
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "user-1" },
+        data: expect.objectContaining({
+          passwordResetCode: expect.any(String),
+          passwordResetExpiresAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(smsMock.sendSmsMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        toNumber: "+19075550123",
+      }),
+    );
+    expect(response.body.message).toContain("If an account with SMS recovery exists");
+  });
+
+  it("confirms a password reset code and updates the password", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: "user-1",
+      email: "alex@example.com",
+      passwordResetCode: "123456",
+      passwordResetExpiresAt: new Date(Date.now() + 60_000),
+    });
+    prismaMock.user.update.mockResolvedValueOnce({ id: "user-1" });
+
+    const response = await request(app)
+      .post("/api/auth/password-reset/confirm")
+      .send({
+        email: "alex@example.com",
+        code: "123456",
+        newPassword: "NewPassword123!",
+      })
+      .expect(200);
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "user-1" },
+        data: expect.objectContaining({
+          passwordHash: "hash:NewPassword123!",
+          passwordResetCode: null,
+          passwordResetExpiresAt: null,
+        }),
+      }),
+    );
+    expect(response.body.message).toContain("Password updated");
   });
 });

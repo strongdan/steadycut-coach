@@ -42,12 +42,21 @@ const state = vi.hoisted(() => {
     }),
   };
 
-  return { prismaMock, passwordMock, jwtMock };
+  const smsMock = {
+    sendSmsMessage: vi.fn(async () => ({
+      skipped: false,
+      reason: "mock_sent" as const,
+      smsMessage: { id: "sms-1" },
+    })),
+  };
+
+  return { prismaMock, passwordMock, jwtMock, smsMock };
 });
 
 const prismaMock = state.prismaMock;
 const passwordMock = state.passwordMock;
 const jwtMock = state.jwtMock;
+const smsMock = state.smsMock;
 
 const installDefaultAuthMocks = () => {
   passwordMock.hashPassword.mockImplementation(async (value: string) => `hash:${value}`);
@@ -76,7 +85,9 @@ vi.mock("../src/lib/password.js", () => state.passwordMock);
 
 vi.mock("../src/lib/jwt.js", () => state.jwtMock);
 
-export { jwtMock, passwordMock, prismaMock };
+vi.mock("../src/lib/sms.js", () => state.smsMock);
+
+export { jwtMock, passwordMock, prismaMock, smsMock };
 
 export const clearApiMocks = () => {
   const mockedFns = [
@@ -96,6 +107,7 @@ export const clearApiMocks = () => {
     passwordMock.comparePassword,
     jwtMock.signToken,
     jwtMock.verifyToken,
+    smsMock.sendSmsMessage,
   ];
 
   for (const mockedFn of mockedFns) {

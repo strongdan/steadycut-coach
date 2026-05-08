@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { loginSchema, registerSchema } from "@steadycut/shared";
+import {
+  loginSchema,
+  passwordResetConfirmSchema,
+  passwordResetRequestSchema,
+  registerSchema,
+} from "@steadycut/shared";
 
 import { env } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
@@ -18,6 +23,8 @@ const cookieOptions = {
   secure: env.NODE_ENV === "production",
   maxAge: 1000 * 60 * 60 * 24 * 7,
 };
+
+const createOneTimeCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 async function validateRecaptcha(token: string) {
   if (!env.RECAPTCHA_SECRET_KEY) return true;
@@ -49,7 +56,7 @@ router.post("/register", async (req, res, next) => {
     }
 
     const passwordHash = await hashPassword(input.password);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = createOneTimeCode();
 
     const user = await prisma.user.create({
       data: {
@@ -140,6 +147,87 @@ router.post("/login", async (req, res, next) => {
         timezone: user.timezone,
         units: user.units,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/password-reset/request", async (req, res, next) => {
+  try {
+    const input = passwordResetRequestSchema.parse(req.body);
+    const user = await prisma.user.findUnique({
+      where: { email: input.email },
+      select: {
+        id: true,
+        phoneNumber: true,
+      },
+    });
+
+    // Do not reveal whether an account exists or whether it has a phone number.
+    if (!user?.phoneNumber) {
+      return res.json({
+        success: true,
+        message: "If an account with SMS recovery exists, a code has been sent.",
+      });
+    }
+
+    const code = createOneTimeCode();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetCode: code,
+        passwordResetExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      },
+    });
+
+    await sendSmsMessage({
+      userId: user.id,
+      toNumber: user.phoneNumber,
+      body: `Your SteadyCut password reset code is: ${code}`,
+      dedupeKey: `password-reset-${user.id}-${Date.now()}`,
+    });
+
+    res.json({
+      success: true,
+      message: "If an account with SMS recovery exists, a code has been sent.",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/password-reset/confirm", async (req, res, next) => {
+  try {
+    const input = passwordResetConfirmSchema.parse(req.body);
+    const user = await prisma.user.findUnique({
+      where: { email: input.email },
+    });
+
+    if (
+      !user ||
+      user.passwordResetCode !== input.code ||
+      !user.passwordResetExpiresAt ||
+      user.passwordResetExpiresAt < new Date()
+    ) {
+      throw new HttpError(400, "Invalid or expired password reset code.");
+    }
+
+    const passwordHash = await hashPassword(input.newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetCode: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Password updated. You can log in with the new password.",
     });
   } catch (error) {
     next(error);

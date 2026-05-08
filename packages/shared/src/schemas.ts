@@ -24,6 +24,16 @@ export const loginSchema = z.object({
   password: z.string().min(8),
 });
 
+export const passwordResetRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+export const passwordResetConfirmSchema = z.object({
+  email: z.string().email(),
+  code: z.string().trim().length(6),
+  newPassword: z.string().min(8),
+});
+
 export const profileSchema = z.object({
   name: z.string().min(1),
   phoneNumber: z.string().min(7).optional().or(z.literal("")),

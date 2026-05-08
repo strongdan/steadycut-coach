@@ -4,7 +4,7 @@ import { CheckInScreen } from "../features/checkins/check-in-screen";
 import { DashboardScreen } from "../features/dashboard/dashboard-screen";
 import { AppShell } from "../features/layout/app-shell";
 import { ProfileScreen } from "../features/layout/profile-screen";
-import { LoginScreen, LandingScreen, RegisterScreen } from "../features/auth/auth-screens";
+import { ForgotPasswordScreen, LoginScreen, LandingScreen, RegisterScreen } from "../features/auth/auth-screens";
 import { ProtectedRoute } from "../features/auth/protected-route";
 import { PlanScreen } from "../features/plan/plan-screen";
 import { SettingsScreen } from "../features/settings/settings-screen";
@@ -13,6 +13,7 @@ export const router = createBrowserRouter([
   { path: "/", element: <LandingScreen /> },
   { path: "/login", element: <LoginScreen /> },
   { path: "/register", element: <RegisterScreen /> },
+  { path: "/forgot-password", element: <ForgotPasswordScreen /> },
   {
     element: <ProtectedRoute />,
     children: [
