@@ -54,7 +54,7 @@ steps:
           --set-cloudsql-instances '${_CLOUDSQL_CONNECTION_NAME}' \
           --set-secrets 'DATABASE_URL=DATABASE_URL:latest' \
           --command 'npx' \
-          --args 'prisma,db,push,--schema,apps/api/prisma/schema.prisma,--accept-data-loss' \
+          --args 'prisma,db,push,--schema,prisma/schema.prisma,--accept-data-loss' \
           --project '${PROJECT_ID}' --quiet
         
         gcloud run jobs execute steadycut-db-sync --region '${_REGION}' --wait --project '${PROJECT_ID}' --quiet
