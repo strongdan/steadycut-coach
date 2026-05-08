@@ -4,7 +4,9 @@ import { dailyCheckInSchema } from "@steadycut/shared";
 
 import { prisma } from "../db/prisma.js";
 import { HttpError } from "../lib/http-error.js";
-import type { AuthedRequest } from "../middleware/auth.js";
+import { generateCoachFeedback } from "../lib/ai-coach.js";
+import { requireAuth } from "../middleware/auth.js";
+
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -44,10 +46,14 @@ router.post("/", async (req, res, next) => {
   try {
     const input = dailyCheckInSchema.parse(req.body);
     const { id } = (req as any).user;
-    const plan = await prisma.plan.findFirst({
-      where: { userId: id, isActive: true, deletedAt: null },
-      orderBy: { createdAt: "desc" },
-    });
+
+    const [user, plan] = await Promise.all([
+      prisma.user.findUnique({ where: { id } }),
+      prisma.plan.findFirst({
+        where: { userId: id, isActive: true, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     const checkIn = await prisma.dailyCheckIn.upsert({
       where: {
@@ -69,9 +75,26 @@ router.post("/", async (req, res, next) => {
       },
     });
 
+    // Calculate adherence score (0-10)
+    let score = 0;
+    if (input.proteinStatus === "yes") score += 3;
+    if (input.fiberStatus === "yes") score += 2;
+    if (input.waterLiters >= 3) score += 2;
+    if (!input.ateAfterCutoff) score += 3;
+
+    const aiFeedback = await generateCoachFeedback({
+      userName: user?.name || "there",
+      tone: user?.coachingTone || "standard",
+      adherenceScore: score,
+      weight: input.weight,
+      mood: input.moodScore,
+      energy: input.energyScore,
+      notes: input.notes,
+    });
+
     res.status(201).json({
       checkIn,
-      coachFeedback: generateMockFeedback(input),
+      coachFeedback: { summary: aiFeedback },
     });
   } catch (error) {
     next(error);
@@ -103,27 +126,5 @@ router.patch("/:id", async (req, res, next) => {
     next(error);
   }
 });
-
-const generateMockFeedback = (input: ReturnType<typeof dailyCheckInSchema.parse>) => {
-  const positives = [];
-  if (input.proteinStatus === "yes") positives.push("protein");
-  if (input.fiberStatus === "yes") positives.push("fiber");
-  if (!input.ateAfterCutoff) positives.push("cutoff");
-  if (input.strengthStatus === "full") positives.push("strength");
-
-  const leverage =
-    input.energyScore <= 2 || input.sleepQualityScore <= 2
-      ? "Recovery is the priority tomorrow. Keep the walk easy and protect sleep."
-      : input.ateAfterCutoff
-        ? "The highest-leverage fix is the evening window. Set up protein, fiber, and water before dinner."
-        : "Repeat the same simple structure tomorrow before adding more effort.";
-
-  return {
-    summary:
-      positives.length > 0
-        ? `Strong signal today: ${positives.join(", ")} went well. ${leverage}`
-        : `Not a failed day. ${leverage}`,
-  };
-};
 
 export const checkInsRouter = router;
