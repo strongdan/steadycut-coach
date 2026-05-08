@@ -124,6 +124,7 @@ describe("auth endpoints", () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: "user-1",
       phoneNumber: "+19075550123",
+      passwordResetRequestedAt: null,
     });
     prismaMock.user.update.mockResolvedValueOnce({ id: "user-1" });
 
@@ -138,6 +139,8 @@ describe("auth endpoints", () => {
         data: expect.objectContaining({
           passwordResetCode: expect.any(String),
           passwordResetExpiresAt: expect.any(Date),
+          passwordResetRequestedAt: expect.any(Date),
+          passwordResetFailedAttempts: 0,
         }),
       }),
     );
@@ -150,12 +153,30 @@ describe("auth endpoints", () => {
     expect(response.body.message).toContain("If an account with SMS recovery exists");
   });
 
+  it("rate limits repeated password reset code requests during cooldown", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: "user-1",
+      phoneNumber: "+19075550123",
+      passwordResetRequestedAt: new Date(Date.now() - 30_000),
+    });
+
+    const response = await request(app)
+      .post("/api/auth/password-reset/request")
+      .send({ email: "alex@example.com" })
+      .expect(429);
+
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+    expect(smsMock.sendSmsMessage).not.toHaveBeenCalled();
+    expect(response.body.message).toContain("Please wait a minute");
+  });
+
   it("confirms a password reset code and updates the password", async () => {
     prismaMock.user.findUnique.mockResolvedValueOnce({
       id: "user-1",
       email: "alex@example.com",
       passwordResetCode: "123456",
       passwordResetExpiresAt: new Date(Date.now() + 60_000),
+      passwordResetFailedAttempts: 0,
     });
     prismaMock.user.update.mockResolvedValueOnce({ id: "user-1" });
 
@@ -175,9 +196,45 @@ describe("auth endpoints", () => {
           passwordHash: "hash:NewPassword123!",
           passwordResetCode: null,
           passwordResetExpiresAt: null,
+          passwordResetRequestedAt: null,
+          passwordResetFailedAttempts: 0,
         }),
       }),
     );
     expect(response.body.message).toContain("Password updated");
+  });
+
+  it("locks the reset flow after too many invalid attempts", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({
+      id: "user-1",
+      email: "alex@example.com",
+      passwordResetCode: "123456",
+      passwordResetExpiresAt: new Date(Date.now() + 60_000),
+      passwordResetRequestedAt: new Date(),
+      passwordResetFailedAttempts: 4,
+    });
+    prismaMock.user.update.mockResolvedValueOnce({ id: "user-1" });
+
+    const response = await request(app)
+      .post("/api/auth/password-reset/confirm")
+      .send({
+        email: "alex@example.com",
+        code: "999999",
+        newPassword: "NewPassword123!",
+      })
+      .expect(429);
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "user-1" },
+        data: expect.objectContaining({
+          passwordResetFailedAttempts: 5,
+          passwordResetCode: null,
+          passwordResetExpiresAt: null,
+          passwordResetRequestedAt: null,
+        }),
+      }),
+    );
+    expect(response.body.message).toContain("Too many invalid attempts");
   });
 });

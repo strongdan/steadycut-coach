@@ -122,6 +122,8 @@ model User {
   otpExpiresAt            DateTime?
   passwordResetCode       String?
   passwordResetExpiresAt  DateTime?
+  passwordResetRequestedAt DateTime?
+  passwordResetFailedAttempts Int            @default(0)
   preferredReminderTimes  Json?
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt

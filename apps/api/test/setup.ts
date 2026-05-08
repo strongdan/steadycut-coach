@@ -11,6 +11,7 @@ process.env.JWT_EXPIRES_IN = "7d";
 process.env.AI_PROVIDER = "mock";
 process.env.SMS_BASE_URL = "http://localhost:5173";
 process.env.DEFAULT_TIMEZONE = "America/Juneau";
+process.env.INTERNAL_JOB_TOKEN = "test-internal-job-token";
 
 beforeEach(() => {
   clearApiMocks();

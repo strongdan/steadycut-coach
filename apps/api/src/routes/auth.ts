@@ -16,6 +16,9 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthedRequest } from "../middleware/auth.js";
 
 const router = Router();
+const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_RESEND_COOLDOWN_MS = 60 * 1000;
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
 
 const cookieOptions = {
   httpOnly: true,
@@ -161,6 +164,7 @@ router.post("/password-reset/request", async (req, res, next) => {
       select: {
         id: true,
         phoneNumber: true,
+        passwordResetRequestedAt: true,
       },
     });
 
@@ -172,13 +176,25 @@ router.post("/password-reset/request", async (req, res, next) => {
       });
     }
 
+    if (
+      user.passwordResetRequestedAt &&
+      user.passwordResetRequestedAt.getTime() > Date.now() - PASSWORD_RESET_RESEND_COOLDOWN_MS
+    ) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait a minute before requesting another password reset code.",
+      });
+    }
+
     const code = createOneTimeCode();
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
         passwordResetCode: code,
-        passwordResetExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+        passwordResetRequestedAt: new Date(),
+        passwordResetFailedAttempts: 0,
       },
     });
 
@@ -205,13 +221,50 @@ router.post("/password-reset/confirm", async (req, res, next) => {
       where: { email: input.email },
     });
 
-    if (
-      !user ||
-      user.passwordResetCode !== input.code ||
-      !user.passwordResetExpiresAt ||
-      user.passwordResetExpiresAt < new Date()
-    ) {
+    if (!user || !user.passwordResetCode || !user.passwordResetExpiresAt) {
       throw new HttpError(400, "Invalid or expired password reset code.");
+    }
+
+    if (user.passwordResetExpiresAt < new Date()) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetCode: null,
+          passwordResetExpiresAt: null,
+          passwordResetRequestedAt: null,
+          passwordResetFailedAttempts: 0,
+        },
+      });
+      throw new HttpError(400, "Invalid or expired password reset code.");
+    }
+
+    if (user.passwordResetFailedAttempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+      throw new HttpError(429, "Too many invalid attempts. Request a new password reset code.");
+    }
+
+    if (user.passwordResetCode !== input.code) {
+      const nextAttemptCount = user.passwordResetFailedAttempts + 1;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetFailedAttempts: nextAttemptCount,
+          ...(nextAttemptCount >= PASSWORD_RESET_MAX_ATTEMPTS
+            ? {
+                passwordResetCode: null,
+                passwordResetExpiresAt: null,
+                passwordResetRequestedAt: null,
+              }
+            : {}),
+        },
+      });
+      throw new HttpError(
+        nextAttemptCount >= PASSWORD_RESET_MAX_ATTEMPTS
+          ? 429
+          : 400,
+        nextAttemptCount >= PASSWORD_RESET_MAX_ATTEMPTS
+          ? "Too many invalid attempts. Request a new password reset code."
+          : "Invalid or expired password reset code.",
+      );
     }
 
     const passwordHash = await hashPassword(input.newPassword);
@@ -222,6 +275,8 @@ router.post("/password-reset/confirm", async (req, res, next) => {
         passwordHash,
         passwordResetCode: null,
         passwordResetExpiresAt: null,
+        passwordResetRequestedAt: null,
+        passwordResetFailedAttempts: 0,
       },
     });
 
